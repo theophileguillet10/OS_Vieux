@@ -13,9 +13,12 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import android.os.Build
+import android.telephony.SmsManager
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Chat
+import androidx.compose.material.icons.filled.Send
 import androidx.compose.material.icons.filled.TextDecrease
 import androidx.compose.material.icons.filled.TextIncrease
 import androidx.compose.material3.*
@@ -297,6 +300,7 @@ fun ConversationView(
     context: android.content.Context
 ) {
     val messages = remember(thread.threadId) { loadMessages(context, thread.threadId) }
+    var messageText by remember { mutableStateOf("") }
 
     Column(modifier = Modifier.fillMaxSize()) {
         LazyColumn(
@@ -314,18 +318,66 @@ fun ConversationView(
         }
 
         Surface(color = Color(0xFFEEEEEE)) {
-            Button(
-                onClick = onBack,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(12.dp)
-                    .height(56.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4527A0)),
-                shape = RoundedCornerShape(12.dp)
-            ) {
-                Icon(Icons.Filled.ArrowBack, null, tint = Color.White)
-                Spacer(Modifier.width(8.dp))
-                Text("Back to Messages", color = Color.White, fontSize = 18.sp)
+            Column(modifier = Modifier.fillMaxWidth().padding(12.dp)) {
+                // Compose row
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    OutlinedTextField(
+                        value = messageText,
+                        onValueChange = { messageText = it },
+                        placeholder = { Text("Write a message…", fontSize = fontSize) },
+                        modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(24.dp),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedTextColor = Color(0xFF1A1A1A),
+                            unfocusedTextColor = Color(0xFF1A1A1A),
+                            focusedBorderColor = Color(0xFF4527A0),
+                            unfocusedBorderColor = Color(0xFFCCCCCC),
+                            focusedContainerColor = Color.White,
+                            unfocusedContainerColor = Color.White
+                        ),
+                        textStyle = androidx.compose.ui.text.TextStyle(fontSize = fontSize)
+                    )
+                    Button(
+                        onClick = {
+                            val text = messageText.trim()
+                            if (text.isNotEmpty()) {
+                                try {
+                                    val smsManager = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                                        context.getSystemService(SmsManager::class.java)
+                                    } else {
+                                        @Suppress("DEPRECATION")
+                                        SmsManager.getDefault()
+                                    }
+                                    smsManager?.sendTextMessage(thread.address, null, text, null, null)
+                                } catch (e: Exception) { /* ignore send errors */ }
+                                messageText = ""
+                            }
+                        },
+                        modifier = Modifier.size(64.dp),
+                        shape = RoundedCornerShape(16.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4527A0)),
+                        contentPadding = PaddingValues(0.dp)
+                    ) {
+                        Icon(Icons.Filled.Send, null, tint = Color.White, modifier = Modifier.size(28.dp))
+                    }
+                }
+
+                Spacer(Modifier.height(8.dp))
+
+                Button(
+                    onClick = onBack,
+                    modifier = Modifier.fillMaxWidth().height(52.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF333333)),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Icon(Icons.Filled.ArrowBack, null, tint = Color.White)
+                    Spacer(Modifier.width(8.dp))
+                    Text("Back to Messages", color = Color.White, fontSize = 16.sp)
+                }
             }
         }
     }

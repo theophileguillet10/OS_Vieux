@@ -42,20 +42,6 @@ fun HomeScreen() {
             .fillMaxSize()
             .background(Color(0xFFEEEEEE))
     ) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(Color(0xFF1A237E))
-                .padding(horizontal = 24.dp, vertical = 20.dp)
-        ) {
-            Text(
-                text = "VieuxOS",
-                color = Color.White,
-                fontSize = 32.sp,
-                fontWeight = FontWeight.Light
-            )
-        }
-
         LazyVerticalGrid(
             columns = GridCells.Fixed(2),
             modifier = Modifier
