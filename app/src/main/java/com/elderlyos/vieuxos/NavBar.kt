@@ -35,7 +35,7 @@ fun BottomNavBar(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 8.dp, vertical = 10.dp),
+                .padding(horizontal = 8.dp, vertical = 12.dp),
             horizontalArrangement = Arrangement.SpaceEvenly,
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -66,8 +66,8 @@ fun BottomNavBar(
 fun NavIconButton(icon: ImageVector, onClick: () -> Unit) {
     Button(
         onClick = onClick,
-        modifier = Modifier.size(64.dp),
-        shape = RoundedCornerShape(12.dp),
+        modifier = Modifier.size(80.dp),
+        shape = RoundedCornerShape(16.dp),
         colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFCCCCCC)),
         contentPadding = PaddingValues(0.dp),
         elevation = ButtonDefaults.buttonElevation(defaultElevation = 2.dp)
@@ -76,7 +76,7 @@ fun NavIconButton(icon: ImageVector, onClick: () -> Unit) {
             imageVector = icon,
             contentDescription = null,
             tint = Color(0xFF222222),
-            modifier = Modifier.size(30.dp)
+            modifier = Modifier.size(40.dp)
         )
     }
 }
