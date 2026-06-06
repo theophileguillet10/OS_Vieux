@@ -98,10 +98,6 @@
             android:exported="false" />
 
         <activity
-            android:name=".GoHomeActivity"
-            android:exported="false" />
-
-        <activity
             android:name=".FamilySetupActivity"
             android:exported="false" />
 
