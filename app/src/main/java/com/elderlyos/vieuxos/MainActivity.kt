@@ -177,6 +177,11 @@ fun PageTwo(context: android.content.Context) {
                 context.startActivity(Intent(context, ChromeActivity::class.java))
             }
         }
+        item {
+            AppTile("Weather", Icons.Filled.WbSunny, Color(0xFFFFA000)) {
+                context.startActivity(Intent(context, MeteoActivity::class.java))
+            }
+        }
     }
 }
 

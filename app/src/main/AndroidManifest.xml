@@ -119,6 +119,10 @@
             android:name=".ChromeActivity"
             android:exported="false" />
 
+        <activity
+            android:name=".MeteoActivity"
+            android:exported="false" />
+
     </application>
 
 </manifest>
