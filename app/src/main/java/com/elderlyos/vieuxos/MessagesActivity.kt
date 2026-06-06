@@ -78,8 +78,7 @@ private fun loadConversations(context: android.content.Context): List<SmsConvers
             Telephony.Sms.Conversations.CONTENT_URI,
             arrayOf(
                 Telephony.Sms.Conversations.THREAD_ID,
-                Telephony.Sms.Conversations.SNIPPET,
-                Telephony.Sms.Conversations.MSG_COUNT
+                Telephony.Sms.Conversations.SNIPPET
             ),
             null, null,
             "${Telephony.Sms.Conversations.DEFAULT_SORT_ORDER}"
