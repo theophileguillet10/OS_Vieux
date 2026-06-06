@@ -80,6 +80,16 @@ fun HomeScreen() {
                 }
             }
             item {
+                AppTile("Gallery", Icons.Filled.PhotoLibrary, Color(0xFF00695C)) {
+                    context.startActivity(Intent(context, GalleryActivity::class.java))
+                }
+            }
+            item {
+                AppTile("Messages", Icons.Filled.Chat, Color(0xFF4527A0)) {
+                    context.startActivity(Intent(context, MessagesActivity::class.java))
+                }
+            }
+            item {
                 AppTile("SOS", Icons.Filled.Warning, Color(0xFFC62828)) {
                     context.startActivity(Intent(Intent.ACTION_DIAL, Uri.parse("tel:112")))
                 }
