@@ -37,6 +37,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import android.content.BroadcastReceiver
+import android.content.IntentFilter
+import android.os.BatteryManager
 import kotlinx.coroutines.delay
 
 class MainActivity : ComponentActivity() {
@@ -54,6 +57,33 @@ fun HomeScreen() {
     val context = LocalContext.current
     var currentPage by remember { mutableIntStateOf(0) }
     var slideDirection by remember { mutableIntStateOf(1) }
+
+    var batteryPct by remember { mutableIntStateOf(100) }
+    var isCharging by remember { mutableStateOf(false) }
+    DisposableEffect(Unit) {
+        val filter = IntentFilter(Intent.ACTION_BATTERY_CHANGED)
+        val receiver = context.registerReceiver(null, filter)
+        receiver?.let {
+            val level = it.getIntExtra(BatteryManager.EXTRA_LEVEL, -1)
+            val scale = it.getIntExtra(BatteryManager.EXTRA_SCALE, -1)
+            if (level >= 0 && scale > 0) batteryPct = (level * 100 / scale)
+            val status = it.getIntExtra(BatteryManager.EXTRA_STATUS, -1)
+            isCharging = status == BatteryManager.BATTERY_STATUS_CHARGING
+                || status == BatteryManager.BATTERY_STATUS_FULL
+        }
+        val br = object : BroadcastReceiver() {
+            override fun onReceive(ctx: android.content.Context, intent: Intent) {
+                val level = intent.getIntExtra(BatteryManager.EXTRA_LEVEL, -1)
+                val scale = intent.getIntExtra(BatteryManager.EXTRA_SCALE, -1)
+                if (level >= 0 && scale > 0) batteryPct = (level * 100 / scale)
+                val status = intent.getIntExtra(BatteryManager.EXTRA_STATUS, -1)
+                isCharging = status == BatteryManager.BATTERY_STATUS_CHARGING
+                    || status == BatteryManager.BATTERY_STATUS_FULL
+            }
+        }
+        context.registerReceiver(br, filter)
+        onDispose { context.unregisterReceiver(br) }
+    }
 
     Column(
         modifier = Modifier
@@ -76,20 +106,45 @@ fun HomeScreen() {
             }
         }
 
-        // Page number indicator
+        // Page number + battery indicator
         Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .background(Color(0xFFDDDDDD))
-                .padding(vertical = 6.dp),
-            contentAlignment = Alignment.Center
+                .padding(horizontal = 20.dp, vertical = 6.dp)
         ) {
             Text(
                 text = "${currentPage + 1} / $PAGE_COUNT",
                 fontSize = 22.sp,
                 fontWeight = FontWeight.Bold,
-                color = Color(0xFF333333)
+                color = Color(0xFF333333),
+                modifier = Modifier.align(Alignment.Center)
             )
+            val batteryIcon = when {
+                isCharging -> Icons.Filled.BatteryChargingFull
+                batteryPct >= 80 -> Icons.Filled.BatteryFull
+                batteryPct >= 50 -> Icons.Filled.Battery5Bar
+                batteryPct >= 20 -> Icons.Filled.Battery3Bar
+                else -> Icons.Filled.Battery1Bar
+            }
+            val batteryColor = when {
+                batteryPct <= 20 -> Color(0xFFE53935)
+                batteryPct <= 50 -> Color(0xFFF57C00)
+                else -> Color(0xFF2E7D32)
+            }
+            Row(
+                modifier = Modifier.align(Alignment.CenterEnd),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(batteryIcon, null, tint = batteryColor, modifier = Modifier.size(22.dp))
+                Spacer(Modifier.width(4.dp))
+                Text(
+                    text = "$batteryPct%",
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = batteryColor
+                )
+            }
         }
 
         BottomNavBar(
