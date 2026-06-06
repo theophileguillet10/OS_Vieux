@@ -114,7 +114,7 @@ fun AppTile(
             .background(color, RoundedCornerShape(8.dp))
             .combinedClickable(
                 interactionSource = interactionSource,
-                indication = ripple(),
+                indication = null,
                 onClick = onClick,
                 onLongClick = onLongClick
             ),
