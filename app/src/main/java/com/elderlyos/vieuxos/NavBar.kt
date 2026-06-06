@@ -2,6 +2,7 @@ package com.elderlyos.vieuxos
 
 import android.app.Activity
 import android.content.Intent
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
