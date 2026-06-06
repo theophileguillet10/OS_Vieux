@@ -91,6 +91,16 @@ fun HomeScreen() {
                     context.startActivity(Intent(Intent.ACTION_DIAL, Uri.parse("tel:112")))
                 }
             }
+            item {
+                AppTile("YouTube", Icons.Filled.PlayCircle, Color(0xFFCC0000)) {
+                    context.startActivity(Intent(context, YoutubeActivity::class.java))
+                }
+            }
+            item {
+                AppTile("Chrome", Icons.Filled.Language, Color(0xFF1A73E8)) {
+                    context.startActivity(Intent(context, ChromeActivity::class.java))
+                }
+            }
         }
 
         BottomNavBar()
