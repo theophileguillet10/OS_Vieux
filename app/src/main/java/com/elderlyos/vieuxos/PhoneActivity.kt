@@ -35,6 +35,12 @@ import androidx.compose.ui.unit.sp
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 
+data class Contact(
+    val name: String,
+    val phone: String,
+    val avatarColor: Color
+)
+
 private val avatarColors = listOf(
     Color(0xFF1565C0), Color(0xFF2E7D32), Color(0xFF6A1B9A), Color(0xFFE65100),
     Color(0xFF00695C), Color(0xFFAD1457), Color(0xFF4527A0), Color(0xFF37474F),
