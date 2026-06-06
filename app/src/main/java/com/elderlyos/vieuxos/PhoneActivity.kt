@@ -43,7 +43,7 @@ private val avatarColors = listOf(
     Color(0xFF1B6E2E), Color(0xFF1560BD)
 )
 
-private fun loadDeviceContacts(resolver: ContentResolver): List<Contact> {
+internal fun loadDeviceContacts(resolver: ContentResolver): List<Contact> {
     val contacts = mutableListOf<Contact>()
     val seen = mutableSetOf<String>()
     resolver.query(
