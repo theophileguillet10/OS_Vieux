@@ -166,7 +166,7 @@ fun PageOne(context: android.content.Context) {
 
         MedicationBanner(
             modifier = Modifier
-                .weight(1f)
+                .height(160.dp)
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp, vertical = 8.dp)
         )
@@ -201,7 +201,7 @@ fun PageTwo(context: android.content.Context) {
 
         BirthdayBanner(
             modifier = Modifier
-                .weight(1f)
+                .height(160.dp)
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp, vertical = 8.dp)
         )
