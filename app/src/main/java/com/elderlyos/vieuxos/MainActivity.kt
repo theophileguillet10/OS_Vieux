@@ -199,6 +199,8 @@ fun PageTwo(context: android.content.Context) {
             }
         }
 
+        Spacer(modifier = Modifier.weight(1f))
+
         BirthdayBanner(
             modifier = Modifier
                 .height(160.dp)
