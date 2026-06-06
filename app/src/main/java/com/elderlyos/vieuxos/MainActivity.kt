@@ -136,12 +136,12 @@ fun HomeScreen() {
                 modifier = Modifier.align(Alignment.CenterEnd),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Icon(batteryIcon, null, tint = batteryColor, modifier = Modifier.size(30.dp))
+                Icon(batteryIcon, null, tint = batteryColor, modifier = Modifier.size(36.dp))
                 Spacer(Modifier.width(4.dp))
                 Text(
                     text = "$batteryPct%",
-                    fontSize = 22.sp,
-                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 28.sp,
+                    fontWeight = FontWeight.Bold,
                     color = batteryColor
                 )
             }
