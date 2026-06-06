@@ -34,11 +34,10 @@ fun GoHomeScreen() {
     val context = LocalContext.current
     val prefs = context.getSharedPreferences("vieuxos_prefs", Context.MODE_PRIVATE)
     var homeAddress by remember { mutableStateOf(prefs.getString("home_address", "") ?: "") }
-    var showSettings by remember { mutableStateOf(false) }
+    var showSettings by remember { mutableStateOf(homeAddress.isEmpty()) }
     var tempAddress by remember { mutableStateOf(homeAddress) }
 
-    fun openGoogleMaps(mode: String) {
-        // mode: "d" = driving, "w" = walking
+    fun openNavigation(mode: String) {
         val uri = Uri.parse("google.navigation:q=${Uri.encode(homeAddress)}&mode=$mode")
         val intent = Intent(Intent.ACTION_VIEW, uri).apply {
             setPackage("com.google.android.apps.maps")
@@ -46,78 +45,119 @@ fun GoHomeScreen() {
         context.startActivity(intent)
     }
 
-    Box(
+    Column(
         modifier = Modifier
             .fillMaxSize()
             .background(Color(0xFF121212))
-            .padding(24.dp)
     ) {
-        if (showSettings) {
-            // Settings screen
-            Column(
-                modifier = Modifier.fillMaxSize(),
-                verticalArrangement = Arrangement.Center,
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Text("Enter Home Address", color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Bold)
-                Spacer(modifier = Modifier.height(24.dp))
-                OutlinedTextField(
-                    value = tempAddress,
-                    onValueChange = { tempAddress = it },
-                    label = { Text("Home Address", color = Color(0xFFAAAAAA)) },
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedTextColor = Color.White,
-                        unfocusedTextColor = Color.White,
-                        focusedBorderColor = Color(0xFF1565C0),
-                        unfocusedBorderColor = Color(0xFF555555)
-                    )
-                )
-                Spacer(modifier = Modifier.height(24.dp))
-                Button(
-                    onClick = {
-                        prefs.edit().putString("home_address", tempAddress).apply()
-                        homeAddress = tempAddress
-                        showSettings = false
-                    },
-                    modifier = Modifier.fillMaxWidth().height(70.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1565C0)),
-                    shape = RoundedCornerShape(16.dp)
+        Box(
+            modifier = Modifier
+                .weight(1f)
+                .fillMaxWidth()
+        ) {
+            if (showSettings) {
+                // SETTINGS VIEW
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(24.dp),
+                    verticalArrangement = Arrangement.Center,
+                    horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    Text("Save", fontSize = 22.sp, color = Color.White)
-                }
-                Spacer(modifier = Modifier.height(16.dp))
-                TextButton(onClick = { showSettings = false }) {
-                    Text("Cancel", color = Color(0xFFAAAAAA), fontSize = 18.sp)
-                }
-            }
-        } else {
-            Column(
-                modifier = Modifier.fillMaxSize(),
-                verticalArrangement = Arrangement.SpaceBetween,
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Spacer(modifier = Modifier.height(32.dp))
-                    Text("🏠", fontSize = 80.sp)
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Text("Go Home", color = Color.White, fontSize = 36.sp, fontWeight = FontWeight.Bold)
+                    Text(
+                        "⚙️ Set Home Address",
+                        color = Color.White,
+                        fontSize = 24.sp,
+                        fontWeight = FontWeight.Bold
+                    )
                     Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        "Ask a family member to set this once",
+                        color = Color(0xFFAAAAAA),
+                        fontSize = 16.sp,
+                        textAlign = TextAlign.Center
+                    )
+                    Spacer(modifier = Modifier.height(24.dp))
+                    OutlinedTextField(
+                        value = tempAddress,
+                        onValueChange = { tempAddress = it },
+                        label = { Text("e.g. 123 Main Street, Paris", color = Color(0xFFAAAAAA)) },
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedTextColor = Color.White,
+                            unfocusedTextColor = Color.White,
+                            focusedBorderColor = Color(0xFF1565C0),
+                            unfocusedBorderColor = Color(0xFF555555)
+                        )
+                    )
+                    Spacer(modifier = Modifier.height(24.dp))
+                    Button(
+                        onClick = {
+                            prefs.edit().putString("home_address", tempAddress).apply()
+                            homeAddress = tempAddress
+                            showSettings = false
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(70.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1565C0)),
+                        shape = RoundedCornerShape(16.dp)
+                    ) {
+                        Text("💾  Save Address", fontSize = 22.sp, color = Color.White)
+                    }
                     if (homeAddress.isNotEmpty()) {
-                        Text(homeAddress, color = Color(0xFFAAAAAA), fontSize = 16.sp, textAlign = TextAlign.Center)
-                    } else {
-                        Text("No address saved yet", color = Color(0xFFFF5555), fontSize = 16.sp)
+                        Spacer(modifier = Modifier.height(16.dp))
+                        TextButton(onClick = { showSettings = false }) {
+                            Text("Cancel", color = Color(0xFFAAAAAA), fontSize = 18.sp)
+                        }
                     }
                 }
-
-                Column(verticalArrangement = Arrangement.spacedBy(16.dp), modifier = Modifier.fillMaxWidth()) {
-                    if (homeAddress.isNotEmpty()) {
-                        BigButton("🚗  By Car", Color(0xFF1565C0)) { openGoogleMaps("d") }
-                        BigButton("🚶  On Foot", Color(0xFF2E7D32)) { openGoogleMaps("w") }
+            } else {
+                // MAIN VIEW
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(24.dp),
+                    verticalArrangement = Arrangement.SpaceBetween,
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Spacer(modifier = Modifier.height(32.dp))
+                        Text("🏠", fontSize = 80.sp)
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Text(
+                            "Take Me Home",
+                            color = Color.White,
+                            fontSize = 36.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            homeAddress,
+                            color = Color(0xFFAAAAAA),
+                            fontSize = 16.sp,
+                            textAlign = TextAlign.Center
+                        )
                     }
-                    BigButton("⚙️  Set Home Address", Color(0xFF424242)) { showSettings = true }
+
+                    Column(
+                        verticalArrangement = Arrangement.spacedBy(16.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        BigButton("🚗  By Car", Color(0xFF1565C0)) {
+                            openNavigation("d")
+                        }
+                        BigButton("🚶  On Foot", Color(0xFF2E7D32)) {
+                            openNavigation("w")
+                        }
+                        BigButton("⚙️  Change Address", Color(0xFF424242)) {
+                            showSettings = true
+                        }
+                    }
                 }
             }
         }
+
+        BottomNavBar()
     }
 }
