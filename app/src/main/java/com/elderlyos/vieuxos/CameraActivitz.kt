@@ -81,15 +81,23 @@ class CameraActivity : ComponentActivity() {
                 )
 
                 // Hint text at bottom
-                Text(
-                    text = "Tap anywhere to take a photo",
-                    color = Color.White,
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Bold,
+// Bottom nav + hint
+                Column(
                     modifier = Modifier
                         .align(Alignment.BottomCenter)
-                        .padding(32.dp)
-                )
+                        .fillMaxWidth()
+                ) {
+                    Text(
+                        text = "Tap anywhere to take a photo",
+                        color = Color.White,
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier
+                            .align(Alignment.CenterHorizontally)
+                            .padding(bottom = 8.dp)
+                    )
+                    BottomNavBar()
+                }
 
                 // Flash feedback
                 if (flashVisible) {

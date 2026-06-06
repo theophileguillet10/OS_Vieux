@@ -45,13 +45,15 @@ fun HomeScreen() {
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFF121212))
-            .padding(24.dp),
+            .background(Color(0xFF121212)),
         verticalArrangement = Arrangement.SpaceBetween,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Spacer(modifier = Modifier.height(32.dp))
+        // Clock + Date
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            modifier = Modifier.padding(top = 48.dp)
+        ) {
             Text(
                 text = currentTime,
                 color = Color.White,
@@ -65,9 +67,12 @@ fun HomeScreen() {
             )
         }
 
+        // Buttons
         Column(
             verticalArrangement = Arrangement.spacedBy(16.dp),
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 24.dp)
         ) {
             BigButton("📞  Call Family", Color(0xFF1565C0)) {
                 val intent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:+1234567890"))
@@ -88,11 +93,8 @@ fun HomeScreen() {
             }
         }
 
-        Text(
-            text = "Press and hold home button to change launcher",
-            color = Color(0xFF555555),
-            fontSize = 12.sp
-        )
+        // Bottom nav bar
+        BottomNavBar()
     }
 }
 
