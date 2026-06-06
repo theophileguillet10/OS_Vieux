@@ -6,6 +6,12 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.animateColor
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
@@ -30,6 +36,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import kotlinx.coroutines.delay
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -109,14 +116,14 @@ fun HomeScreen() {
 
 @Composable
 fun PageOne(context: android.content.Context) {
-    LazyVerticalGrid(
-        columns = GridCells.Fixed(2),
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp),
-        horizontalArrangement = Arrangement.spacedBy(16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
-    ) {
+    Column(modifier = Modifier.fillMaxSize()) {
+        LazyVerticalGrid(
+            columns = GridCells.Fixed(2),
+            modifier = Modifier
+                .padding(16.dp),
+            horizontalArrangement = Arrangement.spacedBy(16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
         item {
             AppTile("Call Family", Icons.Filled.Phone, Color(0xFF2E7D32)) {
                 context.startActivity(Intent(context, PhoneActivity::class.java))
@@ -154,6 +161,14 @@ fun PageOne(context: android.content.Context) {
                 context.startActivity(Intent(Intent.ACTION_DIAL, Uri.parse("tel:112")))
             }
         }
+        }
+
+        MedicationBanner(
+            modifier = Modifier
+                .weight(1f)
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 8.dp)
+        )
     }
 }
 
@@ -226,6 +241,77 @@ fun AppTile(
                 fontWeight = FontWeight.SemiBold,
                 color = Color.White,
                 textAlign = TextAlign.Center
+            )
+        }
+    }
+}
+
+// Edit this list to set the day's medications
+private val medications = listOf(
+    "Doliprane 1000mg" to "8:00",
+    "Metformine 500mg" to "12:00",
+    "Amlodipine 5mg" to "20:00",
+)
+
+private val bannerColors = listOf(
+    Color(0xFFE53935), // red
+    Color(0xFF8E24AA), // purple
+    Color(0xFF1E88E5), // blue
+    Color(0xFF00897B), // teal
+    Color(0xFFF4511E), // deep orange
+    Color(0xFF3949AB), // indigo
+)
+
+@Composable
+fun MedicationBanner(modifier: Modifier = Modifier) {
+    var currentIndex by remember { mutableIntStateOf(0) }
+
+    val infiniteTransition = rememberInfiniteTransition(label = "banner_color")
+    val animatedColor by infiniteTransition.animateColor(
+        initialValue = bannerColors[0],
+        targetValue = bannerColors[1],
+        animationSpec = infiniteRepeatable(
+            animation = tween(1200, easing = LinearEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "bg_color"
+    )
+
+    // Cycle through medications every 3 seconds
+    LaunchedEffect(Unit) {
+        while (true) {
+            delay(3000)
+            currentIndex = (currentIndex + 1) % medications.size
+        }
+    }
+
+    val (name, time) = medications[currentIndex]
+
+    Box(
+        modifier = modifier
+            .background(animatedColor, RoundedCornerShape(16.dp)),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Icon(
+                Icons.Filled.Medication,
+                contentDescription = null,
+                tint = Color.White,
+                modifier = Modifier.size(32.dp)
+            )
+            Spacer(Modifier.height(6.dp))
+            Text(
+                text = name,
+                color = Color.White,
+                fontSize = 22.sp,
+                fontWeight = FontWeight.Bold,
+                textAlign = TextAlign.Center
+            )
+            Text(
+                text = time,
+                color = Color.White.copy(alpha = 0.9f),
+                fontSize = 28.sp,
+                fontWeight = FontWeight.ExtraBold
             )
         }
     }
