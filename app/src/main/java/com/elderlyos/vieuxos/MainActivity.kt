@@ -25,7 +25,6 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
-import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -254,25 +253,19 @@ fun AppTile(
     }
 }
 
-// Edit this list to set the day's medications
-
-private val medications = listOf(
-    "Doliprane 1000mg" to "Breakfast",
-    "Metformine 500mg" to "Lunch",
-    "Amlodipine 5mg" to "Dinner",
-)
-
 private val bannerColors = listOf(
-    Color(0xFFE53935), // red
-    Color(0xFF8E24AA), // purple
-    Color(0xFF1E88E5), // blue
-    Color(0xFF00897B), // teal
-    Color(0xFFF4511E), // deep orange
-    Color(0xFF3949AB), // indigo
+    Color(0xFFE53935),
+    Color(0xFF8E24AA),
+    Color(0xFF1E88E5),
+    Color(0xFF00897B),
+    Color(0xFFF4511E),
+    Color(0xFF3949AB),
 )
 
 @Composable
 fun MedicationBanner(modifier: Modifier = Modifier) {
+    val context = LocalContext.current
+    val medications = remember { loadMedications(context) }
     var currentIndex by remember { mutableIntStateOf(0) }
 
     val infiniteTransition = rememberInfiniteTransition(label = "banner_color")
@@ -286,42 +279,27 @@ fun MedicationBanner(modifier: Modifier = Modifier) {
         label = "bg_color"
     )
 
-    // Cycle through medications every 3 seconds
-    LaunchedEffect(Unit) {
-        while (true) {
+    LaunchedEffect(medications.size) {
+        while (medications.isNotEmpty()) {
             delay(3000)
             currentIndex = (currentIndex + 1) % medications.size
         }
     }
 
-    val (name, time) = medications[currentIndex]
-
     Box(
-        modifier = modifier
-            .background(animatedColor, RoundedCornerShape(16.dp)),
+        modifier = modifier.background(animatedColor, RoundedCornerShape(16.dp)),
         contentAlignment = Alignment.Center
     ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Icon(
-                Icons.Filled.Medication,
-                contentDescription = null,
-                tint = Color.White,
-                modifier = Modifier.size(32.dp)
-            )
-            Spacer(Modifier.height(6.dp))
-            Text(
-                text = name,
-                color = Color.White,
-                fontSize = 22.sp,
-                fontWeight = FontWeight.Bold,
-                textAlign = TextAlign.Center
-            )
-            Text(
-                text = time,
-                color = Color.White.copy(alpha = 0.9f),
-                fontSize = 28.sp,
-                fontWeight = FontWeight.ExtraBold
-            )
+        if (medications.isEmpty()) {
+            Text("No medications", color = Color.White, fontSize = 20.sp)
+        } else {
+            val med = medications[currentIndex]
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Icon(Icons.Filled.Medication, null, tint = Color.White, modifier = Modifier.size(32.dp))
+                Spacer(Modifier.height(6.dp))
+                Text(med.name, color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
+                Text(med.meal, color = Color.White.copy(alpha = 0.9f), fontSize = 28.sp, fontWeight = FontWeight.ExtraBold)
+            }
         }
     }
 }
@@ -329,11 +307,12 @@ fun MedicationBanner(modifier: Modifier = Modifier) {
 @Composable
 fun BirthdayBanner(modifier: Modifier = Modifier) {
     val context = LocalContext.current
+    val allEvents = remember { loadEvents(context) }
     val todaysEvents = remember {
         val cal = java.util.Calendar.getInstance()
         val month = cal.get(java.util.Calendar.MONTH) + 1
         val day = cal.get(java.util.Calendar.DAY_OF_MONTH)
-        eventsForDay(month, day)
+        eventsForDay(allEvents, month, day)
     }
 
     Box(

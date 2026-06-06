@@ -128,18 +128,7 @@ fun PhoneScreen(onRequestDefaultDialer: () -> Unit) {
     val context = LocalContext.current
     val isDefault = rememberIsDefaultDialer()
 
-    val contacts = remember {
-        mutableStateListOf(
-            Contact("Maman",        "+33 6 12 34 56 78"),
-            Contact("Papa",         "+33 6 98 76 54 32"),
-            Contact("Marie",        "+33 6 11 22 33 44"),
-            Contact("Pierre",       "+33 6 55 66 77 88"),
-            Contact("Docteur Brun", "+33 1 42 00 11 22"),
-            Contact("Nathalie",     "+33 6 44 55 66 77"),
-            Contact("Jean-Claude",  "+33 6 33 44 55 66"),
-            Contact("Pharmacie",    "+33 1 45 67 89 00"),
-        )
-    }
+    val contacts = remember { mutableStateListOf<Contact>().also { it.addAll(loadContacts(context)) } }
 
     var showAddDialog by remember { mutableStateOf(false) }
     val listState = rememberLazyListState()
@@ -244,6 +233,7 @@ fun PhoneScreen(onRequestDefaultDialer: () -> Unit) {
             onConfirm = { name, phone ->
                 if (name.isNotBlank() && phone.isNotBlank()) {
                     contacts.add(Contact(name.trim(), phone.trim()))
+                    saveContacts(context, contacts)
                 }
                 showAddDialog = false
             }
