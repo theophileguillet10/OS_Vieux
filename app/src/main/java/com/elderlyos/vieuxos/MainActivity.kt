@@ -96,6 +96,12 @@ fun HomeScreen() {
                     slideDirection = 1
                     currentPage++
                 }
+            },
+            onHome = {
+                if (currentPage != 0) {
+                    slideDirection = -1
+                    currentPage = 0
+                }
             }
         )
     }

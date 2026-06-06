@@ -22,7 +22,8 @@ import androidx.compose.ui.unit.dp
 @Composable
 fun BottomNavBar(
     onLeft: (() -> Unit)? = null,
-    onRight: (() -> Unit)? = null
+    onRight: (() -> Unit)? = null,
+    onHome: (() -> Unit)? = null
 ) {
     val context = LocalContext.current
 
@@ -45,10 +46,14 @@ fun BottomNavBar(
                 onLeft?.invoke()
             }
             NavIconButton(Icons.Filled.Home) {
-                val intent = Intent(context, MainActivity::class.java).apply {
-                    flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
+                if (onHome != null) {
+                    onHome()
+                } else {
+                    val intent = Intent(context, MainActivity::class.java).apply {
+                        flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
+                    }
+                    context.startActivity(intent)
                 }
-                context.startActivity(intent)
             }
             NavIconButton(Icons.Filled.KeyboardArrowRight) {
                 onRight?.invoke()
