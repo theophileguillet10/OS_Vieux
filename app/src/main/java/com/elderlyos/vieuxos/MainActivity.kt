@@ -17,6 +17,7 @@ import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
@@ -318,13 +319,7 @@ fun BirthdayBanner(modifier: Modifier = Modifier) {
     Box(
         modifier = modifier
             .background(Color(0xFF3949AB), RoundedCornerShape(16.dp))
-            .then(
-                Modifier.combinedClickable(
-                    interactionSource = remember { MutableInteractionSource() },
-                    indication = null,
-                    onClick = { context.startActivity(Intent(context, CalendarActivity::class.java)) }
-                )
-            ),
+            .clickable { context.startActivity(Intent(context, CalendarActivity::class.java)) },
         contentAlignment = Alignment.Center
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(16.dp)) {
