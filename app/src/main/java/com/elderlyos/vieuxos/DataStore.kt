@@ -3,11 +3,14 @@ package com.elderlyos.vieuxos
 import android.content.Context
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.WifiOff
-import androidx.compose.material3.*
+import androidx.compose.material3.Icon
+import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -32,41 +35,42 @@ fun NoInternetGuard(content: @Composable () -> Unit) {
     var online by remember { mutableStateOf(isOnline(context)) }
 
     if (!online) {
-        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            Surface(
-                shape = RoundedCornerShape(24.dp),
-                color = Color(0xFF1E1E1E),
-                shadowElevation = 12.dp,
-                modifier = Modifier.padding(32.dp).fillMaxWidth()
+        Box(
+            modifier = Modifier.fillMaxSize().background(Color(0xFF121212)),
+            contentAlignment = Alignment.Center
+        ) {
+            Column(
+                modifier = Modifier
+                    .padding(32.dp)
+                    .background(Color(0xFF1E1E1E), RoundedCornerShape(24.dp))
+                    .padding(32.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(20.dp)
             ) {
-                Column(
-                    modifier = Modifier.padding(32.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(20.dp)
+                Icon(Icons.Filled.WifiOff, null, tint = Color(0xFFE53935), modifier = Modifier.size(80.dp))
+                Text(
+                    "No Internet",
+                    color = Color.White,
+                    fontSize = 36.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                    textAlign = TextAlign.Center
+                )
+                Text(
+                    "Please connect to Wi-Fi or mobile data and try again.",
+                    color = Color(0xFFAAAAAA),
+                    fontSize = 20.sp,
+                    textAlign = TextAlign.Center,
+                    lineHeight = 28.sp
+                )
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(64.dp)
+                        .background(Color(0xFF1565C0), RoundedCornerShape(16.dp))
+                        .clickable { online = isOnline(context) },
+                    contentAlignment = Alignment.Center
                 ) {
-                    Icon(Icons.Filled.WifiOff, null, tint = Color(0xFFE53935), modifier = Modifier.size(80.dp))
-                    Text(
-                        "No Internet",
-                        color = Color.White,
-                        fontSize = 36.sp,
-                        fontWeight = FontWeight.ExtraBold,
-                        textAlign = TextAlign.Center
-                    )
-                    Text(
-                        "Please connect to Wi-Fi or mobile data and try again.",
-                        color = Color(0xFFAAAAAA),
-                        fontSize = 20.sp,
-                        textAlign = TextAlign.Center,
-                        lineHeight = 28.sp
-                    )
-                    Button(
-                        onClick = { online = isOnline(context) },
-                        modifier = Modifier.fillMaxWidth().height(64.dp),
-                        shape = RoundedCornerShape(16.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1565C0))
-                    ) {
-                        Text("Try Again", fontSize = 22.sp, color = Color.White, fontWeight = FontWeight.Bold)
-                    }
+                    Text("Try Again", fontSize = 22.sp, color = Color.White, fontWeight = FontWeight.Bold)
                 }
             }
         }
