@@ -263,24 +263,16 @@ fun MeteoScreen() {
                 ) {
                     Spacer(Modifier.height(4.dp))
 
-                    // City + current weather in a compact row
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Column {
-                            Text(
-                                text = "${w.tempCurrent.toInt()}°C",
-                                color = Color.White,
-                                fontSize = 64.sp,
-                                fontWeight = FontWeight.Bold,
-                                lineHeight = 68.sp
-                            )
-                            Text(weatherLabel(w.weatherCode), color = Color.White.copy(alpha = 0.9f), fontSize = 16.sp)
-                        }
-                        Icon(weatherIcon(w.weatherCode), null, tint = Color.White, modifier = Modifier.size(80.dp))
-                    }
+                    Icon(weatherIcon(w.weatherCode), null, tint = Color.White, modifier = Modifier.size(90.dp))
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        text = "${w.tempCurrent.toInt()}°C",
+                        color = Color.White,
+                        fontSize = 72.sp,
+                        fontWeight = FontWeight.Bold,
+                        lineHeight = 76.sp
+                    )
+                    Text(weatherLabel(w.weatherCode), color = Color.White.copy(alpha = 0.9f), fontSize = 18.sp)
 
                     Spacer(Modifier.height(8.dp))
 
