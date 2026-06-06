@@ -248,9 +248,9 @@ fun AppTile(
 
 // Edit this list to set the day's medications
 private val medications = listOf(
-    "Doliprane 1000mg" to "8:00",
-    "Metformine 500mg" to "12:00",
-    "Amlodipine 5mg" to "20:00",
+    "Doliprane 1000mg" to "Breakfast",
+    "Metformine 500mg" to "Lunch",
+    "Amlodipine 5mg" to "Dinner",
 )
 
 private val bannerColors = listOf(
