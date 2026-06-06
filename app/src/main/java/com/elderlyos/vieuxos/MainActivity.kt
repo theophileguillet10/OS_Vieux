@@ -6,7 +6,8 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
-import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -15,6 +16,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -77,7 +79,14 @@ fun HomeScreen() {
                 }
             }
             item {
-                AppTile("SOS", Icons.Filled.Warning, Color(0xFFC62828)) {
+                AppTile(
+                    label = "SOS",
+                    icon = Icons.Filled.Warning,
+                    color = Color(0xFFC62828),
+                    onLongClick = {
+                        context.startActivity(Intent(context, FamilySetupActivity::class.java))
+                    }
+                ) {
                     context.startActivity(Intent(Intent.ACTION_DIAL, Uri.parse("tel:112")))
                 }
             }
@@ -88,21 +97,31 @@ fun HomeScreen() {
 }
 
 @Composable
-fun AppTile(label: String, icon: ImageVector, color: Color, onClick: () -> Unit) {
-    Button(
-        onClick = onClick,
+fun AppTile(
+    label: String,
+    icon: ImageVector,
+    color: Color,
+    onLongClick: (() -> Unit)? = null,
+    onClick: () -> Unit
+) {
+    val interactionSource = remember { MutableInteractionSource() }
+    Box(
         modifier = Modifier
             .fillMaxWidth()
-            .aspectRatio(1f),
-        shape = RoundedCornerShape(8.dp),
-        colors = ButtonDefaults.buttonColors(containerColor = color),
-        contentPadding = PaddingValues(16.dp),
-        elevation = ButtonDefaults.buttonElevation(defaultElevation = 4.dp)
+            .aspectRatio(1f)
+            .background(color, RoundedCornerShape(8.dp))
+            .combinedClickable(
+                interactionSource = interactionSource,
+                indication = ripple(),
+                onClick = onClick,
+                onLongClick = onLongClick
+            ),
+        contentAlignment = Alignment.Center
     ) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center,
-            modifier = Modifier.fillMaxSize()
+            modifier = Modifier.padding(16.dp)
         ) {
             Icon(
                 imageVector = icon,
