@@ -7,18 +7,22 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import java.text.SimpleDateFormat
-import java.util.*
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -33,85 +37,124 @@ class MainActivity : ComponentActivity() {
 fun HomeScreen() {
     val context = LocalContext.current
 
-    val currentTime = remember {
-        val sdf = SimpleDateFormat("HH:mm", Locale.getDefault())
-        sdf.format(Date())
-    }
-    val currentDate = remember {
-        val sdf = SimpleDateFormat("EEEE, dd MMMM", Locale.getDefault())
-        sdf.format(Date())
-    }
-
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFF121212)),
-        verticalArrangement = Arrangement.SpaceBetween,
-        horizontalAlignment = Alignment.CenterHorizontally
+            .background(Color(0xFFEEEEEE))
     ) {
-        // Clock + Date
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            modifier = Modifier.padding(top = 48.dp)
-        ) {
-            Text(
-                text = currentTime,
-                color = Color.White,
-                fontSize = 80.sp,
-                fontWeight = FontWeight.Thin
-            )
-            Text(
-                text = currentDate,
-                color = Color(0xFFAAAAAA),
-                fontSize = 22.sp
-            )
-        }
-
-        // Buttons
-        Column(
-            verticalArrangement = Arrangement.spacedBy(16.dp),
+        Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 24.dp)
+                .background(Color(0xFF1A237E))
+                .padding(horizontal = 24.dp, vertical = 20.dp)
         ) {
-            BigButton("📞  Call Family", Color(0xFF1565C0)) {
-                val intent = Intent(context, PhoneActivity::class.java)
-                context.startActivity(intent)
+            Text(
+                text = "VieuxOS",
+                color = Color.White,
+                fontSize = 32.sp,
+                fontWeight = FontWeight.Light
+            )
+        }
+
+        LazyVerticalGrid(
+            columns = GridCells.Fixed(2),
+            modifier = Modifier
+                .weight(1f)
+                .padding(16.dp),
+            horizontalArrangement = Arrangement.spacedBy(16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            item {
+                AppTile("Call Family", Icons.Filled.Phone, Color(0xFF1565C0)) {
+                    context.startActivity(Intent(context, PhoneActivity::class.java))
+                }
             }
-            BigButton("🏠  Take Me Home", Color(0xFF2E7D32)) {
-                val intent = Intent(context, GoHomeActivity::class.java)
-                context.startActivity(intent)
+            item {
+                AppTile("Take Me Home", Icons.Filled.Home, Color(0xFF2E7D32)) {
+                    context.startActivity(Intent(context, GoHomeActivity::class.java))
+                }
             }
-            BigButton("📷  Camera", Color(0xFF6A1B9A)) {
-                val intent = Intent(context, CameraActivity::class.java)
-                context.startActivity(intent)
+            item {
+                AppTile("Camera", Icons.Filled.PhotoCamera, Color(0xFF6A1B9A)) {
+                    context.startActivity(Intent(context, CameraActivity::class.java))
+                }
             }
-            BigButton("🆘  SOS", Color(0xFFC62828)) {
-                val intent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:112"))
-                context.startActivity(intent)
+            item {
+                AppTile("SOS", Icons.Filled.Warning, Color(0xFFC62828)) {
+                    context.startActivity(Intent(Intent.ACTION_DIAL, Uri.parse("tel:112")))
+                }
             }
         }
 
-        // Bottom nav bar
         BottomNavBar()
     }
 }
 
 @Composable
-fun BigButton(label: String, color: Color, onClick: () -> Unit) {
+fun AppTile(label: String, icon: ImageVector, color: Color, onClick: () -> Unit) {
     Button(
         onClick = onClick,
         modifier = Modifier
             .fillMaxWidth()
-            .height(100.dp),
-        shape = RoundedCornerShape(20.dp),
-        colors = ButtonDefaults.buttonColors(containerColor = color)
+            .aspectRatio(1f),
+        shape = RoundedCornerShape(8.dp),
+        colors = ButtonDefaults.buttonColors(containerColor = color),
+        contentPadding = PaddingValues(16.dp),
+        elevation = ButtonDefaults.buttonElevation(defaultElevation = 4.dp)
     ) {
-        Text(
-            text = label,
-            fontSize = 26.sp,
-            fontWeight = FontWeight.SemiBold,
-            color = Color.White
-        )
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center,
+            modifier = Modifier.fillMaxSize()
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = label,
+                modifier = Modifier.size(60.dp),
+                tint = Color.White
+            )
+            Spacer(modifier = Modifier.height(14.dp))
+            Text(
+                text = label,
+                fontSize = 18.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = Color.White,
+                textAlign = TextAlign.Center
+            )
+        }
+    }
+}
+
+@Composable
+fun BigButton(label: String, color: Color, icon: ImageVector? = null, onClick: () -> Unit) {
+    Button(
+        onClick = onClick,
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(90.dp),
+        shape = RoundedCornerShape(16.dp),
+        colors = ButtonDefaults.buttonColors(containerColor = color),
+        elevation = ButtonDefaults.buttonElevation(defaultElevation = 4.dp)
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Center
+        ) {
+            if (icon != null) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = Color.White,
+                    modifier = Modifier.size(32.dp)
+                )
+                Spacer(modifier = Modifier.width(16.dp))
+            }
+            Text(
+                text = label,
+                fontSize = 24.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = Color.White
+            )
+        }
     }
 }

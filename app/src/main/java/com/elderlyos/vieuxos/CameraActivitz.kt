@@ -184,7 +184,7 @@ class CameraActivity : ComponentActivity() {
                         )
                     ) {
                         Text(
-                            text = if (isRecording) "⏹  Stop Recording" else "🎥  Record Video",
+                            text = if (isRecording) "Stop Recording" else "Record Video",
                             fontSize = 22.sp,
                             fontWeight = FontWeight.Bold,
                             color = Color.White
@@ -211,7 +211,7 @@ class CameraActivity : ComponentActivity() {
             ContextCompat.getMainExecutor(this),
             object : ImageCapture.OnImageSavedCallback {
                 override fun onImageSaved(output: ImageCapture.OutputFileResults) {
-                    Toast.makeText(this@CameraActivity, "📸 Photo saved!", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this@CameraActivity, "Photo saved!", Toast.LENGTH_SHORT).show()
                 }
                 override fun onError(exc: ImageCaptureException) {
                     Toast.makeText(this@CameraActivity, "Failed: ${exc.message}", Toast.LENGTH_SHORT).show()
@@ -237,7 +237,7 @@ class CameraActivity : ComponentActivity() {
                 .start(ContextCompat.getMainExecutor(this)) { event ->
                     if (event is VideoRecordEvent.Finalize) {
                         if (!event.hasError()) {
-                            Toast.makeText(this, "🎥 Video saved!", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(this, "Video saved!", Toast.LENGTH_SHORT).show()
                         }
                     }
                 }

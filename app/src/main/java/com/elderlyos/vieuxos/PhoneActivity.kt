@@ -11,9 +11,10 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Phone
 import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -56,26 +57,33 @@ fun PhoneScreen() {
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFF121212))
+            .background(Color.White)
     ) {
-        // Header
-        Row(
+        Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 20.dp, vertical = 16.dp),
-            verticalAlignment = Alignment.CenterVertically
+                .background(Color(0xFF1565C0))
+                .padding(horizontal = 20.dp, vertical = 20.dp)
         ) {
-            Text(
-                text = "📞  Téléphone simple",
-                color = Color.White,
-                fontSize = 24.sp,
-                fontWeight = FontWeight.SemiBold
-            )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    imageVector = Icons.Filled.Phone,
+                    contentDescription = null,
+                    tint = Color.White,
+                    modifier = Modifier.size(28.dp)
+                )
+                Spacer(modifier = Modifier.width(12.dp))
+                Text(
+                    text = "Call Family",
+                    color = Color.White,
+                    fontSize = 24.sp,
+                    fontWeight = FontWeight.SemiBold
+                )
+            }
         }
 
-        Divider(color = Color(0xFF222222), thickness = 0.5.dp)
+        HorizontalDivider(color = Color(0xFFDDDDDD), thickness = 1.dp)
 
-        // Contacts list
         LazyColumn(
             modifier = Modifier
                 .fillMaxWidth()
@@ -86,13 +94,15 @@ fun PhoneScreen() {
                     val intent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:${contact.phone}"))
                     context.startActivity(intent)
                 }
-                Divider(
-                    color = Color(0xFF1A1A1A),
-                    thickness = 0.5.dp,
+                HorizontalDivider(
+                    color = Color(0xFFEEEEEE),
+                    thickness = 1.dp,
                     modifier = Modifier.padding(horizontal = 16.dp)
                 )
             }
         }
+
+        BottomNavBar()
     }
 }
 
@@ -108,13 +118,13 @@ fun ContactRow(contact: Contact, onClick: () -> Unit) {
         modifier = Modifier
             .fillMaxWidth()
             .clickable { onClick() }
-            .padding(horizontal = 16.dp, vertical = 14.dp),
+            .background(Color.White)
+            .padding(horizontal = 16.dp, vertical = 16.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // Avatar circle
         Box(
             modifier = Modifier
-                .size(52.dp)
+                .size(56.dp)
                 .clip(CircleShape)
                 .background(contact.avatarColor.copy(alpha = 0.15f)),
             contentAlignment = Alignment.Center
@@ -122,38 +132,41 @@ fun ContactRow(contact: Contact, onClick: () -> Unit) {
             Text(
                 text = initials,
                 color = contact.avatarColor,
-                fontSize = 17.sp,
+                fontSize = 18.sp,
                 fontWeight = FontWeight.SemiBold
             )
         }
 
         Spacer(modifier = Modifier.width(14.dp))
 
-        // Name & number
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = contact.name,
-                color = Color.White,
-                fontSize = 18.sp,
+                color = Color(0xFF1A1A1A),
+                fontSize = 20.sp,
                 fontWeight = FontWeight.Medium
             )
             Spacer(modifier = Modifier.height(2.dp))
             Text(
                 text = contact.phone,
                 color = Color(0xFF666666),
-                fontSize = 14.sp
+                fontSize = 15.sp
             )
         }
 
-        // Call icon
         Box(
             modifier = Modifier
-                .size(42.dp)
+                .size(48.dp)
                 .clip(CircleShape)
-                .background(Color(0xFF1B2E1B)),
+                .background(contact.avatarColor.copy(alpha = 0.12f)),
             contentAlignment = Alignment.Center
         ) {
-            Text(text = "📞", fontSize = 18.sp)
+            Icon(
+                imageVector = Icons.Filled.Phone,
+                contentDescription = "Call",
+                tint = contact.avatarColor,
+                modifier = Modifier.size(24.dp)
+            )
         }
     }
 }

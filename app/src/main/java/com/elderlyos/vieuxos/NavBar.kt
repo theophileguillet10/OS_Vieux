@@ -4,16 +4,19 @@ import android.app.Activity
 import android.content.Intent
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Text
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.KeyboardArrowLeft
+import androidx.compose.material.icons.filled.KeyboardArrowRight
+import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 
 @Composable
 fun BottomNavBar(
@@ -22,48 +25,52 @@ fun BottomNavBar(
 ) {
     val context = LocalContext.current
 
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 8.dp, vertical = 12.dp),
-        horizontalArrangement = Arrangement.SpaceEvenly,
-        verticalAlignment = Alignment.CenterVertically
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        color = Color(0xFFE0E0E0),
+        shadowElevation = 8.dp
     ) {
-        NavButton("←") {
-            (context as? Activity)?.finish()
-        }
-
-        NavButton("◀") {
-            onLeft?.invoke()
-        }
-
-        NavButton("🏠") {
-            val intent = Intent(context, MainActivity::class.java).apply {
-                flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 8.dp, vertical = 10.dp),
+            horizontalArrangement = Arrangement.SpaceEvenly,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            NavIconButton(Icons.Filled.ArrowBack) {
+                (context as? Activity)?.finish()
             }
-            context.startActivity(intent)
+            NavIconButton(Icons.Filled.KeyboardArrowLeft) {
+                onLeft?.invoke()
+            }
+            NavIconButton(Icons.Filled.Home) {
+                val intent = Intent(context, MainActivity::class.java).apply {
+                    flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
+                }
+                context.startActivity(intent)
+            }
+            NavIconButton(Icons.Filled.KeyboardArrowRight) {
+                onRight?.invoke()
+            }
         }
-
-        NavButton("▶") {
-            onRight?.invoke()
-        }
-
     }
 }
 
 @Composable
-fun NavButton(label: String, onClick: () -> Unit) {
+fun NavIconButton(icon: ImageVector, onClick: () -> Unit) {
     Button(
         onClick = onClick,
         modifier = Modifier.size(64.dp),
-        shape = RoundedCornerShape(16.dp),
-        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2A2A2A)),
-        contentPadding = PaddingValues(0.dp)
+        shape = RoundedCornerShape(12.dp),
+        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFCCCCCC)),
+        contentPadding = PaddingValues(0.dp),
+        elevation = ButtonDefaults.buttonElevation(defaultElevation = 2.dp)
     ) {
-        Text(
-            text = label,
-            fontSize = 22.sp,
-            color = Color.White
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = Color(0xFF222222),
+            modifier = Modifier.size(30.dp)
         )
     }
 }
