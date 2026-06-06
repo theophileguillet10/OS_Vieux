@@ -55,12 +55,12 @@ fun HomeScreen() {
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             item {
-                AppTile("Call Family", Icons.Filled.Phone, Color(0xFF1565C0)) {
+                AppTile("Call Family", Icons.Filled.Phone, Color(0xFF2E7D32)) {
                     context.startActivity(Intent(context, PhoneActivity::class.java))
                 }
             }
             item {
-                AppTile("Take Me Home", Icons.Filled.Home, Color(0xFF2E7D32)) {
+                AppTile("Take Me Home", Icons.Filled.Home, Color(0xFF00838F)) {
                     context.startActivity(Intent(context, GoHomeActivity::class.java))
                 }
             }
@@ -70,7 +70,7 @@ fun HomeScreen() {
                 }
             }
             item {
-                AppTile("Gallery", Icons.Filled.PhotoLibrary, Color(0xFF00695C)) {
+                AppTile("Gallery", Icons.Filled.PhotoLibrary, Color(0xFFF57C00)) {
                     context.startActivity(Intent(context, GalleryActivity::class.java))
                 }
             }
@@ -97,7 +97,7 @@ fun HomeScreen() {
                 }
             }
             item {
-                AppTile("Chrome", Icons.Filled.Language, Color(0xFF1A73E8)) {
+                AppTile("Internet", Icons.Filled.Language, Color(0xFF1A73E8)) {
                     context.startActivity(Intent(context, ChromeActivity::class.java))
                 }
             }
