@@ -270,9 +270,6 @@ fun MeteoScreen() {
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
                         Column {
-                            if (w.city.isNotEmpty()) {
-                                Text(w.city, color = Color.White.copy(alpha = 0.9f), fontSize = 20.sp, fontWeight = FontWeight.Medium)
-                            }
                             Text(
                                 text = "${w.tempCurrent.toInt()}°C",
                                 color = Color.White,
