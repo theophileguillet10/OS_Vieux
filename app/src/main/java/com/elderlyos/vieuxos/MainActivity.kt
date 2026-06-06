@@ -174,29 +174,36 @@ fun PageOne(context: android.content.Context) {
 
 @Composable
 fun PageTwo(context: android.content.Context) {
-    LazyVerticalGrid(
-        columns = GridCells.Fixed(2),
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp),
-        horizontalArrangement = Arrangement.spacedBy(16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
-    ) {
-        item {
-            AppTile("YouTube", Icons.Filled.PlayCircle, Color(0xFFCC0000)) {
-                context.startActivity(Intent(context, YoutubeActivity::class.java))
+    Column(modifier = Modifier.fillMaxSize()) {
+        LazyVerticalGrid(
+            columns = GridCells.Fixed(2),
+            modifier = Modifier.padding(16.dp),
+            horizontalArrangement = Arrangement.spacedBy(16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            item {
+                AppTile("YouTube", Icons.Filled.PlayCircle, Color(0xFFCC0000)) {
+                    context.startActivity(Intent(context, YoutubeActivity::class.java))
+                }
+            }
+            item {
+                AppTile("Internet", Icons.Filled.Language, Color(0xFF1A73E8)) {
+                    context.startActivity(Intent(context, ChromeActivity::class.java))
+                }
+            }
+            item {
+                AppTile("Weather", Icons.Filled.WbSunny, Color(0xFFFFA000)) {
+                    context.startActivity(Intent(context, MeteoActivity::class.java))
+                }
             }
         }
-        item {
-            AppTile("Internet", Icons.Filled.Language, Color(0xFF1A73E8)) {
-                context.startActivity(Intent(context, ChromeActivity::class.java))
-            }
-        }
-        item {
-            AppTile("Weather", Icons.Filled.WbSunny, Color(0xFFFFA000)) {
-                context.startActivity(Intent(context, MeteoActivity::class.java))
-            }
-        }
+
+        BirthdayBanner(
+            modifier = Modifier
+                .weight(1f)
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 8.dp)
+        )
     }
 }
 
@@ -247,6 +254,14 @@ fun AppTile(
 }
 
 // Edit this list to set the day's medications
+private val birthdays = listOf(
+    "Maman" to "June 12",
+    "Papa" to "August 3",
+    "Marie" to "January 27",
+    "Pierre" to "March 15",
+    "Nathalie" to "October 8",
+)
+
 private val medications = listOf(
     "Doliprane 1000mg" to "Breakfast",
     "Metformine 500mg" to "Lunch",
@@ -309,6 +324,69 @@ fun MedicationBanner(modifier: Modifier = Modifier) {
             )
             Text(
                 text = time,
+                color = Color.White.copy(alpha = 0.9f),
+                fontSize = 28.sp,
+                fontWeight = FontWeight.ExtraBold
+            )
+        }
+    }
+}
+
+private val birthdayColors = listOf(
+    Color(0xFFD81B60), // pink
+    Color(0xFF6D4C41), // brown
+    Color(0xFF039BE5), // light blue
+    Color(0xFF43A047), // green
+    Color(0xFFF9A825), // amber
+    Color(0xFF5E35B1), // deep purple
+)
+
+@Composable
+fun BirthdayBanner(modifier: Modifier = Modifier) {
+    var currentIndex by remember { mutableIntStateOf(0) }
+
+    val infiniteTransition = rememberInfiniteTransition(label = "birthday_color")
+    val animatedColor by infiniteTransition.animateColor(
+        initialValue = birthdayColors[0],
+        targetValue = birthdayColors[2],
+        animationSpec = infiniteRepeatable(
+            animation = tween(1200, easing = LinearEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "birthday_bg"
+    )
+
+    LaunchedEffect(Unit) {
+        while (true) {
+            delay(3000)
+            currentIndex = (currentIndex + 1) % birthdays.size
+        }
+    }
+
+    val (name, date) = birthdays[currentIndex]
+
+    Box(
+        modifier = modifier
+            .background(animatedColor, RoundedCornerShape(16.dp)),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Icon(
+                Icons.Filled.Cake,
+                contentDescription = null,
+                tint = Color.White,
+                modifier = Modifier.size(32.dp)
+            )
+            Spacer(Modifier.height(6.dp))
+            Text(
+                text = name,
+                color = Color.White,
+                fontSize = 22.sp,
+                fontWeight = FontWeight.Bold,
+                textAlign = TextAlign.Center
+            )
+            Text(
+                text = date,
                 color = Color.White.copy(alpha = 0.9f),
                 fontSize = 28.sp,
                 fontWeight = FontWeight.ExtraBold
