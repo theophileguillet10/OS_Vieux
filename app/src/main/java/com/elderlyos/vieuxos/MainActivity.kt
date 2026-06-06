@@ -5,6 +5,10 @@ import android.net.Uri
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
@@ -16,8 +20,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -31,79 +34,143 @@ import androidx.compose.ui.unit.sp
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContent {
-            HomeScreen()
-        }
+        setContent { HomeScreen() }
     }
 }
+
+// Pages: list of tile lists. Add more pages by adding more lists here.
+private val PAGE_COUNT = 2
 
 @Composable
 fun HomeScreen() {
     val context = LocalContext.current
+    var currentPage by remember { mutableIntStateOf(0) }
+    var slideDirection by remember { mutableIntStateOf(1) }
 
     Column(
         modifier = Modifier
             .fillMaxSize()
             .background(Color(0xFFEEEEEE))
     ) {
-        LazyVerticalGrid(
-            columns = GridCells.Fixed(2),
-            modifier = Modifier
-                .weight(1f)
-                .padding(16.dp),
-            horizontalArrangement = Arrangement.spacedBy(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-            item {
-                AppTile("Call Family", Icons.Filled.Phone, Color(0xFF2E7D32)) {
-                    context.startActivity(Intent(context, PhoneActivity::class.java))
-                }
-            }
-            item {
-                AppTile("Take Me Home", Icons.Filled.Home, Color(0xFF00838F)) {
-                    context.startActivity(Intent(context, GoHomeActivity::class.java))
-                }
-            }
-            item {
-                AppTile("Camera", Icons.Filled.PhotoCamera, Color(0xFF6A1B9A)) {
-                    context.startActivity(Intent(context, CameraActivity::class.java))
-                }
-            }
-            item {
-                AppTile("Gallery", Icons.Filled.PhotoLibrary, Color(0xFFF57C00)) {
-                    context.startActivity(Intent(context, GalleryActivity::class.java))
-                }
-            }
-            item {
-                AppTile("Messages", Icons.Filled.Chat, Color(0xFF4527A0)) {
-                    context.startActivity(Intent(context, MessagesActivity::class.java))
-                }
-            }
-            item {
-                AppTile(
-                    label = "SOS",
-                    icon = Icons.Filled.Warning,
-                    color = Color(0xFFC62828),
-                    onLongClick = {
-                        context.startActivity(Intent(context, FamilySetupActivity::class.java))
-                    }
-                ) {
-                    context.startActivity(Intent(Intent.ACTION_DIAL, Uri.parse("tel:112")))
-                }
-            }
-            item {
-                AppTile("YouTube", Icons.Filled.PlayCircle, Color(0xFFCC0000)) {
-                    context.startActivity(Intent(context, YoutubeActivity::class.java))
-                }
-            }
-            item {
-                AppTile("Internet", Icons.Filled.Language, Color(0xFF1A73E8)) {
-                    context.startActivity(Intent(context, ChromeActivity::class.java))
-                }
+        AnimatedContent(
+            targetState = currentPage,
+            transitionSpec = {
+                slideInHorizontally { it * slideDirection } togetherWith
+                        slideOutHorizontally { -it * slideDirection }
+            },
+            modifier = Modifier.weight(1f),
+            label = "page"
+        ) { page ->
+            when (page) {
+                0 -> PageOne(context)
+                1 -> PageTwo(context)
+                else -> PageOne(context)
             }
         }
 
-        BottomNavBar()
+        // Page number indicator
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(Color(0xFFDDDDDD))
+                .padding(vertical = 6.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = "${currentPage + 1} / $PAGE_COUNT",
+                fontSize = 22.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color(0xFF333333)
+            )
+        }
+
+        BottomNavBar(
+            onLeft = {
+                if (currentPage > 0) {
+                    slideDirection = -1
+                    currentPage--
+                }
+            },
+            onRight = {
+                if (currentPage < PAGE_COUNT - 1) {
+                    slideDirection = 1
+                    currentPage++
+                }
+            }
+        )
+    }
+}
+
+@Composable
+fun PageOne(context: android.content.Context) {
+    LazyVerticalGrid(
+        columns = GridCells.Fixed(2),
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp),
+        horizontalArrangement = Arrangement.spacedBy(16.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        item {
+            AppTile("Call Family", Icons.Filled.Phone, Color(0xFF2E7D32)) {
+                context.startActivity(Intent(context, PhoneActivity::class.java))
+            }
+        }
+        item {
+            AppTile("Take Me Home", Icons.Filled.Home, Color(0xFF00838F)) {
+                context.startActivity(Intent(context, GoHomeActivity::class.java))
+            }
+        }
+        item {
+            AppTile("Camera", Icons.Filled.PhotoCamera, Color(0xFF6A1B9A)) {
+                context.startActivity(Intent(context, CameraActivity::class.java))
+            }
+        }
+        item {
+            AppTile("Gallery", Icons.Filled.PhotoLibrary, Color(0xFFF57C00)) {
+                context.startActivity(Intent(context, GalleryActivity::class.java))
+            }
+        }
+        item {
+            AppTile("Messages", Icons.Filled.Chat, Color(0xFF4527A0)) {
+                context.startActivity(Intent(context, MessagesActivity::class.java))
+            }
+        }
+        item {
+            AppTile(
+                label = "SOS",
+                icon = Icons.Filled.Warning,
+                color = Color(0xFFC62828),
+                onLongClick = {
+                    context.startActivity(Intent(context, FamilySetupActivity::class.java))
+                }
+            ) {
+                context.startActivity(Intent(Intent.ACTION_DIAL, Uri.parse("tel:112")))
+            }
+        }
+    }
+}
+
+@Composable
+fun PageTwo(context: android.content.Context) {
+    LazyVerticalGrid(
+        columns = GridCells.Fixed(2),
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp),
+        horizontalArrangement = Arrangement.spacedBy(16.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        item {
+            AppTile("YouTube", Icons.Filled.PlayCircle, Color(0xFFCC0000)) {
+                context.startActivity(Intent(context, YoutubeActivity::class.java))
+            }
+        }
+        item {
+            AppTile("Internet", Icons.Filled.Language, Color(0xFF1A73E8)) {
+                context.startActivity(Intent(context, ChromeActivity::class.java))
+            }
+        }
     }
 }
 
