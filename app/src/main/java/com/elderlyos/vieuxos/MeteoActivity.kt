@@ -11,9 +11,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -260,36 +258,39 @@ fun MeteoScreen() {
                     modifier = Modifier
                         .weight(1f)
                         .fillMaxWidth()
-                        .verticalScroll(rememberScrollState())
-                        .padding(horizontal = 24.dp),
+                        .padding(horizontal = 16.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    Spacer(Modifier.height(8.dp))
-
-                    if (w.city.isNotEmpty()) {
-                        Text(w.city, color = Color.White.copy(alpha = 0.9f), fontSize = 26.sp, fontWeight = FontWeight.Medium)
-                        Spacer(Modifier.height(8.dp))
-                    }
-
-                    Icon(weatherIcon(w.weatherCode), null, tint = Color.White, modifier = Modifier.size(100.dp))
-                    Spacer(Modifier.height(8.dp))
-
-                    Text(
-                        text = "${w.tempCurrent.toInt()}°C",
-                        color = Color.White,
-                        fontSize = 88.sp,
-                        fontWeight = FontWeight.Bold,
-                        lineHeight = 92.sp
-                    )
                     Spacer(Modifier.height(4.dp))
 
-                    Text(weatherLabel(w.weatherCode), color = Color.White.copy(alpha = 0.9f), fontSize = 24.sp, fontWeight = FontWeight.Medium)
-                    Spacer(Modifier.height(20.dp))
+                    // City + current weather in a compact row
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Column {
+                            if (w.city.isNotEmpty()) {
+                                Text(w.city, color = Color.White.copy(alpha = 0.9f), fontSize = 20.sp, fontWeight = FontWeight.Medium)
+                            }
+                            Text(
+                                text = "${w.tempCurrent.toInt()}°C",
+                                color = Color.White,
+                                fontSize = 64.sp,
+                                fontWeight = FontWeight.Bold,
+                                lineHeight = 68.sp
+                            )
+                            Text(weatherLabel(w.weatherCode), color = Color.White.copy(alpha = 0.9f), fontSize = 16.sp)
+                        }
+                        Icon(weatherIcon(w.weatherCode), null, tint = Color.White, modifier = Modifier.size(80.dp))
+                    }
+
+                    Spacer(Modifier.height(8.dp))
 
                     // Today stats
-                    Surface(shape = RoundedCornerShape(20.dp), color = Color.White.copy(alpha = 0.2f), modifier = Modifier.fillMaxWidth()) {
+                    Surface(shape = RoundedCornerShape(16.dp), color = Color.White.copy(alpha = 0.2f), modifier = Modifier.fillMaxWidth()) {
                         Row(
-                            modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp),
+                            modifier = Modifier.fillMaxWidth().padding(vertical = 10.dp),
                             horizontalArrangement = Arrangement.SpaceEvenly
                         ) {
                             WeatherStat(Icons.Filled.KeyboardArrowDown, "Min", "${w.tempMin.toInt()}°C")
@@ -298,21 +299,24 @@ fun MeteoScreen() {
                         }
                     }
 
-                    Spacer(Modifier.height(24.dp))
+                    Spacer(Modifier.height(10.dp))
 
                     // Forecast header
                     Text(
                         text = "Next 6 days",
                         color = Color.White,
-                        fontSize = 20.sp,
+                        fontSize = 18.sp,
                         fontWeight = FontWeight.SemiBold,
                         modifier = Modifier.align(Alignment.Start)
                     )
-                    Spacer(Modifier.height(10.dp))
+                    Spacer(Modifier.height(6.dp))
 
-                    // Forecast rows
-                    Surface(shape = RoundedCornerShape(20.dp), color = Color.White.copy(alpha = 0.2f), modifier = Modifier.fillMaxWidth()) {
-                        Column(modifier = Modifier.padding(vertical = 8.dp)) {
+                    // Forecast rows — fills remaining space
+                    Surface(shape = RoundedCornerShape(16.dp), color = Color.White.copy(alpha = 0.2f), modifier = Modifier.fillMaxWidth().weight(1f)) {
+                        Column(
+                            modifier = Modifier.padding(vertical = 4.dp),
+                            verticalArrangement = Arrangement.SpaceEvenly
+                        ) {
                             w.forecast.forEachIndexed { index, day ->
                                 ForecastRow(day)
                                 if (index < w.forecast.lastIndex) {
@@ -322,7 +326,7 @@ fun MeteoScreen() {
                         }
                     }
 
-                    Spacer(Modifier.height(24.dp))
+                    Spacer(Modifier.height(8.dp))
                 }
             }
         }
@@ -336,22 +340,22 @@ fun ForecastRow(day: DailyForecast) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 20.dp, vertical = 14.dp),
+            .padding(horizontal = 16.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(
             text = day.date,
             color = Color.White,
-            fontSize = 18.sp,
+            fontSize = 16.sp,
             fontWeight = FontWeight.Medium,
             modifier = Modifier.weight(1f)
         )
-        Icon(weatherIcon(day.weatherCode), null, tint = Color.White, modifier = Modifier.size(28.dp))
-        Spacer(Modifier.width(16.dp))
+        Icon(weatherIcon(day.weatherCode), null, tint = Color.White, modifier = Modifier.size(24.dp))
+        Spacer(Modifier.width(12.dp))
         Text(
             text = "${day.tempMin.toInt()}° / ${day.tempMax.toInt()}°",
             color = Color.White,
-            fontSize = 18.sp,
+            fontSize = 16.sp,
             fontWeight = FontWeight.SemiBold,
             textAlign = TextAlign.End
         )
@@ -361,9 +365,9 @@ fun ForecastRow(day: DailyForecast) {
 @Composable
 fun WeatherStat(icon: ImageVector, label: String, value: String) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Icon(icon, null, tint = Color.White, modifier = Modifier.size(32.dp))
-        Spacer(Modifier.height(4.dp))
-        Text(text = value, color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold)
-        Text(text = label, color = Color.White.copy(alpha = 0.8f), fontSize = 16.sp)
+        Icon(icon, null, tint = Color.White, modifier = Modifier.size(24.dp))
+        Spacer(Modifier.height(2.dp))
+        Text(text = value, color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+        Text(text = label, color = Color.White.copy(alpha = 0.8f), fontSize = 13.sp)
     }
 }
