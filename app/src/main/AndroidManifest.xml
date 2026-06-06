@@ -123,6 +123,10 @@
             android:name=".MeteoActivity"
             android:exported="false" />
 
+        <activity
+            android:name=".CalendarActivity"
+            android:exported="false" />
+
     </application>
 
 </manifest>

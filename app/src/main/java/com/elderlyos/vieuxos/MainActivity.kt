@@ -25,6 +25,7 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -254,13 +255,6 @@ fun AppTile(
 }
 
 // Edit this list to set the day's medications
-private val birthdays = listOf(
-    "Maman" to "June 12",
-    "Papa" to "August 3",
-    "Marie" to "January 27",
-    "Pierre" to "March 15",
-    "Nathalie" to "October 8",
-)
 
 private val medications = listOf(
     "Doliprane 1000mg" to "Breakfast",
@@ -334,51 +328,46 @@ fun MedicationBanner(modifier: Modifier = Modifier) {
 
 @Composable
 fun BirthdayBanner(modifier: Modifier = Modifier) {
-    val today = remember {
+    val context = LocalContext.current
+    val todaysEvents = remember {
         val cal = java.util.Calendar.getInstance()
-        val month = java.text.SimpleDateFormat("MMMM", java.util.Locale.ENGLISH).format(cal.time)
+        val month = cal.get(java.util.Calendar.MONTH) + 1
         val day = cal.get(java.util.Calendar.DAY_OF_MONTH)
-        "$month $day"
-    }
-
-    val todaysBirthdays = remember {
-        birthdays.filter { (_, date) ->
-            val parts = date.split(" ")
-            if (parts.size == 2) {
-                val cal = java.util.Calendar.getInstance()
-                val month = java.text.SimpleDateFormat("MMMM", java.util.Locale.ENGLISH).format(cal.time)
-                val day = cal.get(java.util.Calendar.DAY_OF_MONTH).toString()
-                parts[0] == month && parts[1] == day.toString()
-            } else false
-        }
+        eventsForDay(month, day)
     }
 
     Box(
-        modifier = modifier.background(Color(0xFFD81B60), RoundedCornerShape(16.dp)),
+        modifier = modifier
+            .background(Color(0xFF3949AB), RoundedCornerShape(16.dp))
+            .then(
+                Modifier.combinedClickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null,
+                    onClick = { context.startActivity(Intent(context, CalendarActivity::class.java)) }
+                )
+            ),
         contentAlignment = Alignment.Center
     ) {
-        if (todaysBirthdays.isEmpty()) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Icon(Icons.Filled.Cake, null, tint = Color.White, modifier = Modifier.size(32.dp))
-                Spacer(Modifier.height(6.dp))
-                Text("No birthday today", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.SemiBold)
-            }
-        } else {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Icon(Icons.Filled.Cake, null, tint = Color.White, modifier = Modifier.size(32.dp))
-                Spacer(Modifier.height(6.dp))
-                Text("Today's Birthday", color = Color.White.copy(alpha = 0.85f), fontSize = 16.sp)
-                Spacer(Modifier.height(4.dp))
-                todaysBirthdays.forEach { (name, _) ->
+        Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(16.dp)) {
+            Icon(Icons.Filled.CalendarMonth, null, tint = Color.White, modifier = Modifier.size(32.dp))
+            Spacer(Modifier.height(6.dp))
+            Text("Today's Events", color = Color.White.copy(alpha = 0.85f), fontSize = 15.sp)
+            Spacer(Modifier.height(4.dp))
+            if (todaysEvents.isEmpty()) {
+                Text("No events today", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.SemiBold)
+            } else {
+                todaysEvents.forEach { event ->
                     Text(
-                        text = name,
+                        text = event.title,
                         color = Color.White,
-                        fontSize = 28.sp,
+                        fontSize = 22.sp,
                         fontWeight = FontWeight.ExtraBold,
                         textAlign = TextAlign.Center
                     )
                 }
             }
+            Spacer(Modifier.height(8.dp))
+            Text("Tap to see the week →", color = Color.White.copy(alpha = 0.7f), fontSize = 13.sp)
         }
     }
 }
