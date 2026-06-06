@@ -6,6 +6,7 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
@@ -96,6 +97,7 @@ fun HomeScreen() {
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun AppTile(
     label: String,
