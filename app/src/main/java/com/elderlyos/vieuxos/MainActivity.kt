@@ -159,7 +159,7 @@ fun PageOne(context: android.content.Context) {
                     context.startActivity(Intent(context, FamilySetupActivity::class.java))
                 }
             ) {
-                context.startActivity(Intent(Intent.ACTION_DIAL, Uri.parse("tel:112")))
+                context.startActivity(Intent(context, SOSActivity::class.java))
             }
         }
         }

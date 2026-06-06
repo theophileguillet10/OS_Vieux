@@ -33,10 +33,20 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.core.content.ContextCompat
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.LifecycleEventObserver
-import androidx.compose.ui.platform.LocalLifecycleOwner
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+
+// ── Light theme colors ────────────────────────────────────────────────────────
+private val PH_BG           = Color(0xFFF5F5F5)
+private val PH_SURFACE      = Color(0xFFFFFFFF)
+private val PH_TEXT_PRI     = Color(0xFF111111)
+private val PH_TEXT_SEC     = Color(0xFF666666)
+private val PH_BORDER       = Color(0xFFDDDDDD)
+private val PH_BLUE         = Color(0xFF1565C0)
+private val PH_BLUE_LIGHT   = Color(0xFFE3F2FD)
+private val PH_ORANGE       = Color(0xFFE65100)
+private val PH_ORANGE_LIGHT = Color(0xFFFFF3E0)
+private val PH_BTN_DARK     = Color(0xFF424242)
 
 private val avatarColors = listOf(
     Color(0xFF1B6E2E), Color(0xFF1560BD), Color(0xFF7B1FA2),
@@ -45,17 +55,15 @@ private val avatarColors = listOf(
     Color(0xFF558B2F),
 )
 
-data class Contact(val name: String, val phone: String)
-
 class PhoneActivity : ComponentActivity() {
 
     private val defaultDialerLauncher = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult()
-    ) { /* résultat ignoré — onResume recheck via DisposableEffect */ }
+    ) { /* result ignored — ON_RESUME recheck via DisposableEffect */ }
 
     private val permissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
-    ) { /* géré via checkSelfPermission à l'usage */ }
+    ) { /* handled at use site */ }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -108,16 +116,11 @@ private fun rememberIsDefaultDialer(): Boolean {
     val context = LocalContext.current
     var isDefault by remember { mutableStateOf(isDefaultDialer(context)) }
 
-    // Utilise les imports en haut — plus de fully-qualified
-    val lifecycleOwner = LocalLifecycleOwner.current
-    DisposableEffect(lifecycleOwner) {
-        val observer = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_RESUME) {
-                isDefault = isDefaultDialer(context)
-            }
+    LaunchedEffect(Unit) {
+        while (true) {
+            isDefault = isDefaultDialer(context)
+            delay(1000)
         }
-        lifecycleOwner.lifecycle.addObserver(observer)
-        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
     return isDefault
@@ -138,32 +141,38 @@ fun PhoneScreen(onRequestDefaultDialer: () -> Unit) {
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFF121212))
+            .background(PH_BG)
     ) {
+        // ── Default dialer banner ─────────────────────────────────────────────
         if (!isDefault) {
             DefaultDialerBanner(onRequestDefaultDialer = onRequestDefaultDialer)
         }
 
+        // ── Header ────────────────────────────────────────────────────────────
         Row(
             modifier = Modifier
                 .fillMaxWidth()
+                .background(PH_SURFACE)
                 .padding(horizontal = 20.dp, vertical = 16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
                 text = "📞  Phone",
-                color = Color.White,
+                color = PH_TEXT_PRI,
                 fontSize = 30.sp,
                 fontWeight = FontWeight.SemiBold
             )
         }
+        HorizontalDivider(color = PH_BORDER, thickness = 1.dp)
 
-        HorizontalDivider(color = Color(0xFF222222), thickness = 0.5.dp)
-
+        // ── Contact list ──────────────────────────────────────────────────────
         LazyColumn(
             state = listState,
             userScrollEnabled = false,
-            modifier = Modifier.fillMaxWidth().weight(1f)
+            modifier = Modifier
+                .fillMaxWidth()
+                .weight(1f)
+                .background(PH_SURFACE)
         ) {
             items(contacts) { contact ->
                 val colorIndex = contacts.indexOf(contact) % avatarColors.size
@@ -178,18 +187,19 @@ fun PhoneScreen(onRequestDefaultDialer: () -> Unit) {
                     }
                 }
                 HorizontalDivider(
-                    color = Color(0xFF1A1A1A), thickness = 0.5.dp,
+                    color = PH_BORDER, thickness = 0.5.dp,
                     modifier = Modifier.padding(horizontal = 16.dp)
                 )
             }
         }
 
-        HorizontalDivider(color = Color(0xFF2A2A2A), thickness = 1.dp)
+        HorizontalDivider(color = PH_BORDER, thickness = 1.dp)
 
+        // ── Up / Down / Add bar ───────────────────────────────────────────────
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(Color(0xFF181818))
+                .background(PH_SURFACE)
                 .padding(horizontal = 12.dp, vertical = 10.dp),
             horizontalArrangement = Arrangement.spacedBy(10.dp),
             verticalAlignment = Alignment.CenterVertically
@@ -202,7 +212,7 @@ fun PhoneScreen(onRequestDefaultDialer: () -> Unit) {
                 },
                 modifier = Modifier.weight(1f).height(64.dp),
                 shape = RoundedCornerShape(16.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2A2A2A))
+                colors = ButtonDefaults.buttonColors(containerColor = PH_BTN_DARK)
             ) { Text("▲  Up", fontSize = 18.sp, color = Color.White) }
 
             Button(
@@ -213,14 +223,14 @@ fun PhoneScreen(onRequestDefaultDialer: () -> Unit) {
                 },
                 modifier = Modifier.weight(1f).height(64.dp),
                 shape = RoundedCornerShape(16.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2A2A2A))
+                colors = ButtonDefaults.buttonColors(containerColor = PH_BTN_DARK)
             ) { Text("▼  Down", fontSize = 18.sp, color = Color.White) }
 
             Button(
                 onClick = { showAddDialog = true },
                 modifier = Modifier.weight(1f).height(64.dp),
                 shape = RoundedCornerShape(16.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1560BD))
+                colors = ButtonDefaults.buttonColors(containerColor = PH_BLUE)
             ) { Text("＋  Add", fontSize = 18.sp, color = Color.White) }
         }
 
@@ -241,12 +251,13 @@ fun PhoneScreen(onRequestDefaultDialer: () -> Unit) {
     }
 }
 
+// ── Default dialer banner ─────────────────────────────────────────────────────
 @Composable
 fun DefaultDialerBanner(onRequestDefaultDialer: () -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .background(Color(0xFF7B3300))
+            .background(PH_ORANGE_LIGHT)
             .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp)
@@ -254,18 +265,19 @@ fun DefaultDialerBanner(onRequestDefaultDialer: () -> Unit) {
         Text("⚠️", fontSize = 22.sp)
         Text(
             text = "VieuxOS is not the default phone app.\nTap Activate to use the custom call screen.",
-            color = Color.White,
+            color = PH_ORANGE,
             fontSize = 14.sp,
             modifier = Modifier.weight(1f)
         )
         Button(
             onClick = onRequestDefaultDialer,
             shape = RoundedCornerShape(10.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFE65100))
+            colors = ButtonDefaults.buttonColors(containerColor = PH_ORANGE)
         ) { Text("Activate", color = Color.White, fontSize = 14.sp) }
     }
 }
 
+// ── Contact row ───────────────────────────────────────────────────────────────
 @Composable
 fun ContactRow(contact: Contact, avatarColor: Color, onClick: () -> Unit) {
     val initials = contact.name
@@ -281,25 +293,31 @@ fun ContactRow(contact: Contact, avatarColor: Color, onClick: () -> Unit) {
         verticalAlignment = Alignment.CenterVertically
     ) {
         Box(
-            modifier = Modifier.size(64.dp).clip(CircleShape)
-                .background(avatarColor.copy(alpha = 0.18f)),
+            modifier = Modifier
+                .size(64.dp)
+                .clip(CircleShape)
+                .background(avatarColor.copy(alpha = 0.15f)),
             contentAlignment = Alignment.Center
         ) {
             Text(text = initials, color = avatarColor, fontSize = 22.sp, fontWeight = FontWeight.Bold)
         }
         Spacer(modifier = Modifier.width(16.dp))
         Column(modifier = Modifier.weight(1f)) {
-            Text(text = contact.name, color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Medium)
+            Text(text = contact.name, color = PH_TEXT_PRI, fontSize = 24.sp, fontWeight = FontWeight.Medium)
             Spacer(modifier = Modifier.height(4.dp))
-            Text(text = contact.phone, color = Color(0xFF888888), fontSize = 18.sp)
+            Text(text = contact.phone, color = PH_TEXT_SEC, fontSize = 18.sp)
         }
         Box(
-            modifier = Modifier.size(56.dp).clip(CircleShape).background(Color(0xFF1B3A1B)),
+            modifier = Modifier
+                .size(56.dp)
+                .clip(CircleShape)
+                .background(Color(0xFFE8F5E9)),
             contentAlignment = Alignment.Center
         ) { Text(text = "📞", fontSize = 24.sp) }
     }
 }
 
+// ── Add contact dialog ────────────────────────────────────────────────────────
 @Composable
 fun AddContactDialog(onDismiss: () -> Unit, onConfirm: (String, String) -> Unit) {
     var name by remember { mutableStateOf("") }
@@ -308,21 +326,26 @@ fun AddContactDialog(onDismiss: () -> Unit, onConfirm: (String, String) -> Unit)
     Dialog(onDismissRequest = onDismiss) {
         Surface(
             shape = RoundedCornerShape(24.dp),
-            color = Color(0xFF1E1E1E),
+            color = PH_SURFACE,
             modifier = Modifier.fillMaxWidth()
         ) {
             Column(modifier = Modifier.padding(24.dp)) {
-                Text("New contact", color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.SemiBold)
+                Text(
+                    "New contact",
+                    color = PH_TEXT_PRI, fontSize = 24.sp, fontWeight = FontWeight.SemiBold
+                )
                 Spacer(modifier = Modifier.height(20.dp))
                 OutlinedTextField(
                     value = name, onValueChange = { name = it },
                     label = { Text("Name", fontSize = 18.sp) },
                     singleLine = true, modifier = Modifier.fillMaxWidth(),
-                    textStyle = LocalTextStyle.current.copy(fontSize = 20.sp, color = Color.White),
+                    textStyle = LocalTextStyle.current.copy(fontSize = 20.sp, color = PH_TEXT_PRI),
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = Color(0xFF1560BD), unfocusedBorderColor = Color(0xFF444444),
-                        focusedLabelColor = Color(0xFF4a9eff), unfocusedLabelColor = Color(0xFF888888),
-                        cursorColor = Color.White,
+                        focusedBorderColor = PH_BLUE,
+                        unfocusedBorderColor = PH_BORDER,
+                        focusedLabelColor = PH_BLUE,
+                        unfocusedLabelColor = PH_TEXT_SEC,
+                        cursorColor = PH_TEXT_PRI,
                     )
                 )
                 Spacer(modifier = Modifier.height(14.dp))
@@ -332,27 +355,33 @@ fun AddContactDialog(onDismiss: () -> Unit, onConfirm: (String, String) -> Unit)
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
                     modifier = Modifier.fillMaxWidth(),
-                    textStyle = LocalTextStyle.current.copy(fontSize = 20.sp, color = Color.White),
+                    textStyle = LocalTextStyle.current.copy(fontSize = 20.sp, color = PH_TEXT_PRI),
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = Color(0xFF1560BD), unfocusedBorderColor = Color(0xFF444444),
-                        focusedLabelColor = Color(0xFF4a9eff), unfocusedLabelColor = Color(0xFF888888),
-                        cursorColor = Color.White,
+                        focusedBorderColor = PH_BLUE,
+                        unfocusedBorderColor = PH_BORDER,
+                        focusedLabelColor = PH_BLUE,
+                        unfocusedLabelColor = PH_TEXT_SEC,
+                        cursorColor = PH_TEXT_PRI,
                     )
                 )
                 Spacer(modifier = Modifier.height(24.dp))
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
                     OutlinedButton(
                         onClick = onDismiss,
                         modifier = Modifier.weight(1f).height(56.dp),
                         shape = RoundedCornerShape(14.dp),
-                        colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFF888888))
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = PH_TEXT_SEC)
                     ) { Text("Cancel", fontSize = 18.sp) }
+
                     Button(
                         onClick = { onConfirm(name, phone) },
                         enabled = name.isNotBlank() && phone.isNotBlank(),
                         modifier = Modifier.weight(1f).height(56.dp),
                         shape = RoundedCornerShape(14.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1560BD))
+                        colors = ButtonDefaults.buttonColors(containerColor = PH_BLUE)
                     ) { Text("Add", fontSize = 18.sp, color = Color.White) }
                 }
             }

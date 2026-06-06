@@ -25,6 +25,18 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.delay
 
+// ── Light theme colors ────────────────────────────────────────────────────────
+private val IC_BG           = Color(0xFFF5F5F5)
+private val IC_SURFACE      = Color(0xFFFFFFFF)
+private val IC_TEXT_PRI     = Color(0xFF111111)
+private val IC_TEXT_SEC     = Color(0xFF666666)
+private val IC_BORDER       = Color(0xFFDDDDDD)
+private val IC_GREEN        = Color(0xFF2E7D32)
+private val IC_GREEN_LIGHT  = Color(0xFFE8F5E9)
+private val IC_BLUE         = Color(0xFF1565C0)
+private val IC_BLUE_LIGHT   = Color(0xFFE3F2FD)
+private val IC_RED          = Color(0xFFD32F2F)
+
 class InCallActivity : ComponentActivity() {
 
     companion object {
@@ -118,6 +130,7 @@ fun InCallScreen(
         else                    -> "…"
     }
 
+    // Pulse animation on avatar while connecting
     val infiniteTransition = rememberInfiniteTransition(label = "pulse")
     val pulse by infiniteTransition.animateFloat(
         initialValue = 1f, targetValue = 1.08f,
@@ -133,31 +146,35 @@ fun InCallScreen(
         .mapNotNull { it.firstOrNull()?.uppercaseChar() }
         .joinToString("")
 
-    val speakerColor by animateColorAsState(
-        targetValue = if (isSpeaker) Color(0xFF1560BD) else Color(0xFF2A2A2A),
+    val speakerContainerColor by animateColorAsState(
+        targetValue = if (isSpeaker) IC_BLUE else IC_SURFACE,
         label = "speakerColor"
+    )
+    val speakerTextColor by animateColorAsState(
+        targetValue = if (isSpeaker) Color.White else IC_TEXT_PRI,
+        label = "speakerTextColor"
     )
 
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFF0D0D0D)),
+            .background(IC_BG),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Spacer(modifier = Modifier.weight(0.6f))
 
-        // ── Avatar ──────────────────────────────────────────────────────────
+        // ── Avatar ────────────────────────────────────────────────────────────
         Box(
             modifier = Modifier
                 .size(140.dp)
                 .scale(avatarScale)
                 .clip(CircleShape)
-                .background(Color(0xFF1B3A1B)),
+                .background(IC_GREEN_LIGHT),
             contentAlignment = Alignment.Center
         ) {
             Text(
                 text = initials.ifEmpty { "?" },
-                color = Color(0xFF4CAF50),
+                color = IC_GREEN,
                 fontSize = 52.sp,
                 fontWeight = FontWeight.Bold
             )
@@ -165,26 +182,26 @@ fun InCallScreen(
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        // ── Caller name ──────────────────────────────────────────────────────
+        // ── Caller name ───────────────────────────────────────────────────────
         Text(
             text = callerName,
-            color = Color.White,
+            color = IC_TEXT_PRI,
             fontSize = 36.sp,
             fontWeight = FontWeight.SemiBold
         )
 
         Spacer(modifier = Modifier.height(10.dp))
 
-        // ── Status / Timer ───────────────────────────────────────────────────
+        // ── Status / Timer ────────────────────────────────────────────────────
         Text(
             text = statusLabel,
-            color = Color(0xFF888888),
+            color = IC_TEXT_SEC,
             fontSize = 22.sp
         )
 
         Spacer(modifier = Modifier.weight(1f))
 
-        // ── Speaker button ───────────────────────────────────────────────────
+        // ── Speaker button ────────────────────────────────────────────────────
         Button(
             onClick = {
                 isSpeaker = !isSpeaker
@@ -196,19 +213,20 @@ fun InCallScreen(
                 .padding(horizontal = 32.dp)
                 .height(88.dp),
             shape = RoundedCornerShape(24.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = speakerColor)
+            colors = ButtonDefaults.buttonColors(containerColor = speakerContainerColor),
+            elevation = ButtonDefaults.buttonElevation(defaultElevation = 2.dp)
         ) {
             Text(
                 text = if (isSpeaker) "🔊  Speaker ON" else "🔊  Speaker",
                 fontSize = 26.sp,
-                color = Color.White,
+                color = speakerTextColor,
                 fontWeight = FontWeight.Medium
             )
         }
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // ── Hang up button ───────────────────────────────────────────────────
+        // ── Hang up button ────────────────────────────────────────────────────
         Button(
             onClick = onHangUp,
             modifier = Modifier
@@ -216,7 +234,7 @@ fun InCallScreen(
                 .padding(horizontal = 32.dp)
                 .height(96.dp),
             shape = RoundedCornerShape(24.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFB71C1C))
+            colors = ButtonDefaults.buttonColors(containerColor = IC_RED)
         ) {
             Text(
                 text = "📵  Hang Up",
@@ -228,7 +246,7 @@ fun InCallScreen(
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // ── NavBar ───────────────────────────────────────────────────────────
+        // ── NavBar ────────────────────────────────────────────────────────────
         BottomNavBar()
     }
 }
