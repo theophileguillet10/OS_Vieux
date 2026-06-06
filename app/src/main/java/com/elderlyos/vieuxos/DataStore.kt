@@ -35,44 +35,47 @@ fun NoInternetGuard(content: @Composable () -> Unit) {
     var online by remember { mutableStateOf(isOnline(context)) }
 
     if (!online) {
-        Box(
-            modifier = Modifier.fillMaxSize().background(Color(0xFF121212)),
-            contentAlignment = Alignment.Center
-        ) {
-            Column(
-                modifier = Modifier
-                    .padding(32.dp)
-                    .background(Color(0xFF1E1E1E), RoundedCornerShape(24.dp))
-                    .padding(32.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(20.dp)
+        Column(modifier = Modifier.fillMaxSize().background(Color(0xFF121212))) {
+            Box(
+                modifier = Modifier.weight(1f).fillMaxWidth(),
+                contentAlignment = Alignment.Center
             ) {
-                Icon(Icons.Filled.WifiOff, null, tint = Color(0xFFE53935), modifier = Modifier.size(80.dp))
-                Text(
-                    "No Internet",
-                    color = Color.White,
-                    fontSize = 36.sp,
-                    fontWeight = FontWeight.ExtraBold,
-                    textAlign = TextAlign.Center
-                )
-                Text(
-                    "Please connect to Wi-Fi or mobile data and try again.",
-                    color = Color(0xFFAAAAAA),
-                    fontSize = 20.sp,
-                    textAlign = TextAlign.Center,
-                    lineHeight = 28.sp
-                )
-                Box(
+                Column(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .height(64.dp)
-                        .background(Color(0xFF1565C0), RoundedCornerShape(16.dp))
-                        .clickable { online = isOnline(context) },
-                    contentAlignment = Alignment.Center
+                        .padding(32.dp)
+                        .background(Color(0xFF1E1E1E), RoundedCornerShape(24.dp))
+                        .padding(32.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(20.dp)
                 ) {
-                    Text("Try Again", fontSize = 22.sp, color = Color.White, fontWeight = FontWeight.Bold)
+                    Icon(Icons.Filled.WifiOff, null, tint = Color(0xFFE53935), modifier = Modifier.size(80.dp))
+                    Text(
+                        "No Internet",
+                        color = Color.White,
+                        fontSize = 36.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                        textAlign = TextAlign.Center
+                    )
+                    Text(
+                        "Please connect to Wi-Fi or mobile data and try again.",
+                        color = Color(0xFFAAAAAA),
+                        fontSize = 20.sp,
+                        textAlign = TextAlign.Center,
+                        lineHeight = 28.sp
+                    )
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(64.dp)
+                            .background(Color(0xFF1565C0), RoundedCornerShape(16.dp))
+                            .clickable { online = isOnline(context) },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text("Try Again", fontSize = 22.sp, color = Color.White, fontWeight = FontWeight.Bold)
+                    }
                 }
             }
+            BottomNavBar()
         }
     } else {
         content()
