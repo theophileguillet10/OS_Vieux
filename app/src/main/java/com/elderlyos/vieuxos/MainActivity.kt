@@ -75,7 +75,7 @@ fun HomeScreen() {
                 .padding(horizontal = 24.dp)
         ) {
             BigButton("📞  Call Family", Color(0xFF1565C0)) {
-                val intent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:+1234567890"))
+                val intent = Intent(context, PhoneActivity::class.java)
                 context.startActivity(intent)
             }
             BigButton("🏠  Take Me Home", Color(0xFF2E7D32)) {
