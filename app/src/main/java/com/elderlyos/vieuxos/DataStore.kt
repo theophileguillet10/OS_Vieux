@@ -141,11 +141,29 @@ data class CalEvent(val month: Int, val day: Int, val title: String)
 
 private val defaultEvents = listOf(
     CalEvent(6,  6,  "Doctor appointment"),
+    CalEvent(6,  6,  "Take medication at breakfast"),
+    CalEvent(6,  7,  "Morning walk"),
+    CalEvent(6,  7,  "Call Marie"),
     CalEvent(6,  8,  "Birthday Maman"),
+    CalEvent(6,  8,  "Family dinner"),
     CalEvent(6,  9,  "Pharmacy"),
+    CalEvent(6,  9,  "Physical therapy"),
     CalEvent(6,  10, "Family lunch"),
+    CalEvent(6,  10, "Grocery shopping"),
+    CalEvent(6,  11, "Rest day"),
+    CalEvent(6,  11, "Video call with Pierre"),
     CalEvent(6,  12, "Cardiology checkup"),
+    CalEvent(6,  12, "Afternoon nap"),
+    CalEvent(6,  13, "Hairdresser"),
+    CalEvent(6,  13, "Call Nathalie"),
     CalEvent(6,  14, "Birthday Pierre"),
+    CalEvent(6,  14, "Church"),
+    CalEvent(6,  15, "Blood test at clinic"),
+    CalEvent(6,  16, "Lunch with Jean-Claude"),
+    CalEvent(6,  17, "Ophthalmologist"),
+    CalEvent(6,  18, "Visit from Marie"),
+    CalEvent(6,  19, "Dentist"),
+    CalEvent(6,  20, "Family barbecue"),
 )
 
 fun loadEvents(context: Context): List<CalEvent> {
