@@ -17,7 +17,6 @@ import android.os.Build
 import android.telephony.SmsManager
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.Chat
 import androidx.compose.material.icons.filled.Send
 import androidx.compose.material.icons.filled.TextDecrease
 import androidx.compose.material.icons.filled.TextIncrease
@@ -55,6 +54,10 @@ data class SmsMessage(
 class MessagesActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        // Init shared contact repository
+        ContactRepository.init(this)
+
         val contactName = intent.getStringExtra("contact_name")
         val contactPhone = intent.getStringExtra("contact_phone")
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_SMS) == PackageManager.PERMISSION_GRANTED) {
@@ -76,6 +79,36 @@ class MessagesActivity : ComponentActivity() {
     }
 }
 
+// ── Resolve a phone number to a contact name from the repository ──────────────
+private fun resolveContactName(phone: String): String {
+    val normalized = phone.replace(" ", "").replace("-", "")
+    return ContactRepository.contacts.find { contact ->
+        contact.phone.replace(" ", "").replace("-", "").endsWith(normalized.takeLast(9))
+                || normalized.endsWith(contact.phone.replace(" ", "").replace("-", "").takeLast(9))
+    }?.name ?: phone
+}
+
+// ── Fake test data ────────────────────────────────────────────────────────────
+private const val FAKE_THREAD_ID = -99L
+
+private val fakeConversations = listOf(
+    SmsConversation(
+        threadId = FAKE_THREAD_ID,
+        address  = "+33 6 12 34 56 78",   // matches "Mum" in ContactRepository
+        snippet  = "Don't forget your doctor's appointment tomorrow!",
+        date     = System.currentTimeMillis() - 3_600_000,
+        unread   = true
+    )
+)
+
+private val fakeMessages = listOf(
+    SmsMessage("Hi dear, how are you feeling today? 😊", System.currentTimeMillis() - 7_200_000, isIncoming = true),
+    SmsMessage("I'm fine thanks! A bit tired but good.", System.currentTimeMillis() - 6_900_000, isIncoming = false),
+    SmsMessage("Make sure you eat well and drink water!", System.currentTimeMillis() - 6_600_000, isIncoming = true),
+    SmsMessage("Yes Mum, I will 😄", System.currentTimeMillis() - 6_300_000, isIncoming = false),
+    SmsMessage("Don't forget your doctor's appointment tomorrow!", System.currentTimeMillis() - 3_600_000, isIncoming = true),
+)
+
 private fun loadConversations(context: android.content.Context): List<SmsConversation> {
     val conversations = mutableListOf<SmsConversation>()
     try {
@@ -94,7 +127,6 @@ private fun loadConversations(context: android.content.Context): List<SmsConvers
             while (it.moveToNext()) {
                 val threadId = it.getLong(threadIdCol)
                 val snippet = it.getString(snippetCol) ?: ""
-                // Get address and date from the actual SMS table
                 val smsCursor = context.contentResolver.query(
                     Telephony.Sms.CONTENT_URI,
                     arrayOf(Telephony.Sms.ADDRESS, Telephony.Sms.DATE, Telephony.Sms.READ),
@@ -112,13 +144,18 @@ private fun loadConversations(context: android.content.Context): List<SmsConvers
                 }
             }
         }
-    } catch (e: Exception) {
-        // Return empty list if SMS reading fails
-    }
-    return conversations.sortedByDescending { it.date }
+    } catch (e: Exception) { /* return empty list if SMS reading fails */ }
+
+    val real = conversations.sortedByDescending { it.date }
+    // Inject fake conversation for UI testing when no real SMS exist
+    return if (real.isEmpty()) fakeConversations else real
 }
 
+
 private fun loadMessages(context: android.content.Context, threadId: Long): List<SmsMessage> {
+    // Return fake messages for the test thread
+    if (threadId == FAKE_THREAD_ID) return fakeMessages
+
     val messages = mutableListOf<SmsMessage>()
     try {
         context.contentResolver.query(
@@ -156,7 +193,6 @@ private fun formatDate(timestamp: Long): String {
 fun MessagesScreen(initialName: String? = null, initialPhone: String? = null) {
     val context = LocalContext.current
     val conversations = remember { loadConversations(context) }
-    // If launched from a contact, pre-open that conversation (or a new one)
     val initialThread = remember(initialPhone) {
         if (initialPhone != null) {
             conversations.find { it.address == initialPhone }
@@ -165,15 +201,24 @@ fun MessagesScreen(initialName: String? = null, initialPhone: String? = null) {
     }
     var selectedThread by remember { mutableStateOf<SmsConversation?>(initialThread) }
     var fontSize by remember { mutableStateOf(18.sp) }
-    // Display name: prefer contact name over raw phone number
-    fun displayName(thread: SmsConversation) = if (thread == initialThread && initialName != null) initialName else thread.address
+    var showContactPicker by remember { mutableStateOf(false) }
+
+    // Resolve display name: contact repo first, then passed name, then raw number
+    fun displayName(thread: SmsConversation): String {
+        val fromRepo = resolveContactName(thread.address)
+        return when {
+            fromRepo != thread.address -> fromRepo          // found in repo
+            thread == initialThread && initialName != null -> initialName
+            else -> thread.address
+        }
+    }
 
     Column(
         modifier = Modifier
             .fillMaxSize()
             .background(Color.White)
     ) {
-        // Header with font size controls
+        // ── Header ────────────────────────────────────────────────────────────
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -186,72 +231,111 @@ fun MessagesScreen(initialName: String? = null, initialPhone: String? = null) {
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Filled.Chat, null, tint = Color.White, modifier = Modifier.size(28.dp))
-                    Spacer(Modifier.width(10.dp))
+                    if (selectedThread != null) {
+                        IconButton(onClick = { selectedThread = null }) {
+                            Icon(Icons.Filled.ArrowBack, null, tint = Color.White)
+                        }
+                        Spacer(Modifier.width(8.dp))
+                    }
                     Text(
-                        text = if (selectedThread != null) displayName(selectedThread!!) else "Messages",
+                        text = if (selectedThread != null) displayName(selectedThread!!) else "💬  Messages",
                         color = Color.White,
-                        fontSize = 22.sp,
+                        fontSize = 24.sp,
                         fontWeight = FontWeight.SemiBold,
                         maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.widthIn(max = 180.dp)
+                        overflow = TextOverflow.Ellipsis
                     )
                 }
-                // Font size controls
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     FontSizeButton(Icons.Filled.TextDecrease) {
-                        fontSize = (fontSize.value - 2f).coerceAtLeast(12f).sp
+                        if (fontSize.value > 14f) fontSize = (fontSize.value - 2).sp
                     }
                     FontSizeButton(Icons.Filled.TextIncrease) {
-                        fontSize = (fontSize.value + 2f).coerceAtMost(32f).sp
+                        if (fontSize.value < 30f) fontSize = (fontSize.value + 2).sp
                     }
                 }
             }
         }
 
-        if (selectedThread != null) {
+        // ── Content ───────────────────────────────────────────────────────────
+        if (selectedThread == null) {
+            // ── New Message button ────────────────────────────────────────────
+            Button(
+                onClick = { showContactPicker = true },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 12.dp)
+                    .height(60.dp),
+                shape = RoundedCornerShape(16.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4527A0))
+            ) {
+                Text("✉️  New Message", fontSize = 20.sp, color = Color.White, fontWeight = FontWeight.SemiBold)
+            }
+            HorizontalDivider(color = Color(0xFFEEEEEE))
+
+            if (conversations.isEmpty()) {
+                Box(modifier = Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
+                    Text("No messages yet", color = Color(0xFF999999), fontSize = fontSize)
+                }
+            } else {
+                LazyColumn(modifier = Modifier.weight(1f)) {
+                    items(conversations) { conv ->
+                        ConversationRow(
+                            conversation = conv,
+                            displayName = displayName(conv),
+                            fontSize = fontSize
+                        ) { selectedThread = conv }
+                        HorizontalDivider(color = Color(0xFFEEEEEE), thickness = 0.5.dp)
+                    }
+                }
+            }
+        } else {
             ConversationView(
                 thread = selectedThread!!,
                 fontSize = fontSize,
                 onBack = { selectedThread = null },
                 context = context
             )
-        } else {
-            if (conversations.isEmpty()) {
-                Box(
-                    modifier = Modifier
-                        .weight(1f)
-                        .fillMaxWidth(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text("No messages found", color = Color(0xFF666666), fontSize = 20.sp)
-                }
-            } else {
-                LazyColumn(
-                    modifier = Modifier
-                        .weight(1f)
-                        .fillMaxWidth()
-                ) {
-                    items(conversations) { conv ->
-                        ConversationRow(conversation = conv, fontSize = fontSize) {
-                            selectedThread = conv
-                        }
-                        HorizontalDivider(color = Color(0xFFEEEEEE), thickness = 1.dp)
-                    }
-                }
-            }
-            BottomNavBar()
         }
+
+        BottomNavBar()
+    }
+
+    // ── Contact picker for new message ────────────────────────────────────────
+    if (showContactPicker) {
+        ContactPickerDialog(
+            contacts = ContactRepository.contacts,
+            onDismiss = { showContactPicker = false },
+            onSelect = { contact ->
+                showContactPicker = false
+                // Open or reuse existing thread for this contact
+                val existing = conversations.find { conv ->
+                    resolveContactName(conv.address) == contact.name ||
+                            conv.address.replace(" ", "") == contact.phone.replace(" ", "")
+                }
+                selectedThread = existing ?: SmsConversation(
+                    threadId = -1L,
+                    address  = contact.phone,
+                    snippet  = "",
+                    date     = System.currentTimeMillis(),
+                    unread   = false
+                )
+            }
+        )
     }
 }
 
 @Composable
-fun ConversationRow(conversation: SmsConversation, fontSize: TextUnit, onClick: () -> Unit) {
-    val initials = conversation.address
-        .filter { it.isLetter() }
-        .take(2)
-        .uppercase()
+fun ConversationRow(
+    conversation: SmsConversation,
+    displayName: String,
+    fontSize: TextUnit,
+    onClick: () -> Unit
+) {
+    val initials = displayName
+        .split(" ").take(2)
+        .mapNotNull { it.firstOrNull()?.uppercaseChar() }
+        .joinToString("")
         .ifEmpty { "#" }
 
     Row(
@@ -271,12 +355,10 @@ fun ConversationRow(conversation: SmsConversation, fontSize: TextUnit, onClick: 
         ) {
             Text(initials, color = Color(0xFF4527A0), fontSize = 16.sp, fontWeight = FontWeight.Bold)
         }
-
         Spacer(Modifier.width(14.dp))
-
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                text = conversation.address,
+                text = displayName,
                 color = Color(0xFF1A1A1A),
                 fontSize = fontSize,
                 fontWeight = if (conversation.unread) FontWeight.Bold else FontWeight.Normal,
@@ -292,7 +374,6 @@ fun ConversationRow(conversation: SmsConversation, fontSize: TextUnit, onClick: 
                 overflow = TextOverflow.Ellipsis
             )
         }
-
         Spacer(Modifier.width(8.dp))
         Text(
             text = formatDate(conversation.date),
@@ -330,7 +411,6 @@ fun ConversationView(
 
         Surface(color = Color(0xFFEEEEEE)) {
             Column(modifier = Modifier.fillMaxWidth().padding(12.dp)) {
-                // Compose row
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically,
@@ -376,9 +456,7 @@ fun ConversationView(
                         Icon(Icons.Filled.Send, null, tint = Color.White, modifier = Modifier.size(28.dp))
                     }
                 }
-
                 Spacer(Modifier.height(8.dp))
-
                 Button(
                     onClick = onBack,
                     modifier = Modifier.fillMaxWidth().height(52.dp),
