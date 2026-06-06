@@ -115,7 +115,7 @@ fun HomeScreen() {
         ) {
             Text(
                 text = "${currentPage + 1} / $PAGE_COUNT",
-                fontSize = 22.sp,
+                fontSize = 28.sp,
                 fontWeight = FontWeight.Bold,
                 color = Color(0xFF333333),
                 modifier = Modifier.align(Alignment.Center)
@@ -136,11 +136,11 @@ fun HomeScreen() {
                 modifier = Modifier.align(Alignment.CenterEnd),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Icon(batteryIcon, null, tint = batteryColor, modifier = Modifier.size(22.dp))
+                Icon(batteryIcon, null, tint = batteryColor, modifier = Modifier.size(30.dp))
                 Spacer(Modifier.width(4.dp))
                 Text(
                     text = "$batteryPct%",
-                    fontSize = 16.sp,
+                    fontSize = 22.sp,
                     fontWeight = FontWeight.SemiBold,
                     color = batteryColor
                 )
