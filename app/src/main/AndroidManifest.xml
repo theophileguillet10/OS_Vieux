@@ -31,6 +31,10 @@
         </activity>
 
         <activity
+            android:name=".GoHomeActivity"
+            android:exported="false" />
+
+        <activity
             android:name=".CameraActivity"
             android:exported="false" />
 

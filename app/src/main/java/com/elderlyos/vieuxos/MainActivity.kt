@@ -79,8 +79,7 @@ fun HomeScreen() {
                 context.startActivity(intent)
             }
             BigButton("🏠  Take Me Home", Color(0xFF2E7D32)) {
-                val uri = Uri.parse("google.navigation:q=My+Home&mode=w")
-                val intent = Intent(Intent.ACTION_VIEW, uri)
+                val intent = Intent(context, GoHomeActivity::class.java)
                 context.startActivity(intent)
             }
             BigButton("📷  Camera", Color(0xFF6A1B9A)) {
