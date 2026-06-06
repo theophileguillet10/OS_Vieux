@@ -66,7 +66,7 @@ fun BottomNavBar(
 fun NavIconButton(icon: ImageVector, onClick: () -> Unit) {
     Button(
         onClick = onClick,
-        modifier = Modifier.size(80.dp),
+        modifier = Modifier.width(110.dp).height(80.dp),
         shape = RoundedCornerShape(16.dp),
         colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFCCCCCC)),
         contentPadding = PaddingValues(0.dp),
