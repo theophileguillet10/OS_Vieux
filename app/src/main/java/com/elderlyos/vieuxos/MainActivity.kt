@@ -332,65 +332,53 @@ fun MedicationBanner(modifier: Modifier = Modifier) {
     }
 }
 
-private val birthdayColors = listOf(
-    Color(0xFFD81B60), // pink
-    Color(0xFF6D4C41), // brown
-    Color(0xFF039BE5), // light blue
-    Color(0xFF43A047), // green
-    Color(0xFFF9A825), // amber
-    Color(0xFF5E35B1), // deep purple
-)
-
 @Composable
 fun BirthdayBanner(modifier: Modifier = Modifier) {
-    var currentIndex by remember { mutableIntStateOf(0) }
+    val today = remember {
+        val cal = java.util.Calendar.getInstance()
+        val month = java.text.SimpleDateFormat("MMMM", java.util.Locale.ENGLISH).format(cal.time)
+        val day = cal.get(java.util.Calendar.DAY_OF_MONTH)
+        "$month $day"
+    }
 
-    val infiniteTransition = rememberInfiniteTransition(label = "birthday_color")
-    val animatedColor by infiniteTransition.animateColor(
-        initialValue = birthdayColors[0],
-        targetValue = birthdayColors[2],
-        animationSpec = infiniteRepeatable(
-            animation = tween(1200, easing = LinearEasing),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "birthday_bg"
-    )
-
-    LaunchedEffect(Unit) {
-        while (true) {
-            delay(3000)
-            currentIndex = (currentIndex + 1) % birthdays.size
+    val todaysBirthdays = remember {
+        birthdays.filter { (_, date) ->
+            val parts = date.split(" ")
+            if (parts.size == 2) {
+                val cal = java.util.Calendar.getInstance()
+                val month = java.text.SimpleDateFormat("MMMM", java.util.Locale.ENGLISH).format(cal.time)
+                val day = cal.get(java.util.Calendar.DAY_OF_MONTH).toString()
+                parts[0] == month && parts[1] == day.toString()
+            } else false
         }
     }
 
-    val (name, date) = birthdays[currentIndex]
-
     Box(
-        modifier = modifier
-            .background(animatedColor, RoundedCornerShape(16.dp)),
+        modifier = modifier.background(Color(0xFFD81B60), RoundedCornerShape(16.dp)),
         contentAlignment = Alignment.Center
     ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Icon(
-                Icons.Filled.Cake,
-                contentDescription = null,
-                tint = Color.White,
-                modifier = Modifier.size(32.dp)
-            )
-            Spacer(Modifier.height(6.dp))
-            Text(
-                text = name,
-                color = Color.White,
-                fontSize = 22.sp,
-                fontWeight = FontWeight.Bold,
-                textAlign = TextAlign.Center
-            )
-            Text(
-                text = date,
-                color = Color.White.copy(alpha = 0.9f),
-                fontSize = 28.sp,
-                fontWeight = FontWeight.ExtraBold
-            )
+        if (todaysBirthdays.isEmpty()) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Icon(Icons.Filled.Cake, null, tint = Color.White, modifier = Modifier.size(32.dp))
+                Spacer(Modifier.height(6.dp))
+                Text("No birthday today", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.SemiBold)
+            }
+        } else {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Icon(Icons.Filled.Cake, null, tint = Color.White, modifier = Modifier.size(32.dp))
+                Spacer(Modifier.height(6.dp))
+                Text("Today's Birthday", color = Color.White.copy(alpha = 0.85f), fontSize = 16.sp)
+                Spacer(Modifier.height(4.dp))
+                todaysBirthdays.forEach { (name, _) ->
+                    Text(
+                        text = name,
+                        color = Color.White,
+                        fontSize = 28.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                        textAlign = TextAlign.Center
+                    )
+                }
+            }
         }
     }
 }
