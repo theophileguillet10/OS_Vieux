@@ -1,12 +1,9 @@
 package com.elderlyos.vieuxos
 
 import android.Manifest
-import android.content.ContentResolver
 import android.content.pm.PackageManager
-import android.os.Build
 import android.os.Bundle
 import android.provider.Telephony
-import android.telephony.SmsManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
@@ -16,10 +13,11 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import android.os.Build
+import android.telephony.SmsManager
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Chat
-import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Send
 import androidx.compose.material.icons.filled.TextDecrease
 import androidx.compose.material.icons.filled.TextIncrease
@@ -158,32 +156,24 @@ private fun formatDate(timestamp: Long): String {
 fun MessagesScreen(initialName: String? = null, initialPhone: String? = null) {
     val context = LocalContext.current
     val conversations = remember { loadConversations(context) }
-    val contacts = remember { loadDeviceContacts(context.contentResolver) }
-
+    // If launched from a contact, pre-open that conversation (or a new one)
     val initialThread = remember(initialPhone) {
         if (initialPhone != null) {
             conversations.find { it.address == initialPhone }
                 ?: SmsConversation(-1L, initialPhone, "", System.currentTimeMillis(), false)
         } else null
     }
-
     var selectedThread by remember { mutableStateOf<SmsConversation?>(initialThread) }
-    var selectedName by remember { mutableStateOf(initialName) }
-    var showContactPicker by remember { mutableStateOf(false) }
     var fontSize by remember { mutableStateOf(18.sp) }
-
-    val headerTitle = when {
-        showContactPicker -> "New Message"
-        selectedThread != null -> selectedName ?: selectedThread!!.address
-        else -> "Messages"
-    }
+    // Display name: prefer contact name over raw phone number
+    fun displayName(thread: SmsConversation) = if (thread == initialThread && initialName != null) initialName else thread.address
 
     Column(
         modifier = Modifier
             .fillMaxSize()
             .background(Color.White)
     ) {
-        // Header
+        // Header with font size controls
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -199,136 +189,69 @@ fun MessagesScreen(initialName: String? = null, initialPhone: String? = null) {
                     Icon(Icons.Filled.Chat, null, tint = Color.White, modifier = Modifier.size(28.dp))
                     Spacer(Modifier.width(10.dp))
                     Text(
-                        text = headerTitle,
+                        text = if (selectedThread != null) displayName(selectedThread!!) else "Messages",
                         color = Color.White,
                         fontSize = 22.sp,
                         fontWeight = FontWeight.SemiBold,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.widthIn(max = 160.dp)
+                        modifier = Modifier.widthIn(max = 180.dp)
                     )
                 }
+                // Font size controls
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    if (!showContactPicker && selectedThread == null) {
-                        // New message button
-                        FontSizeButton(Icons.Filled.Edit) { showContactPicker = true }
+                    FontSizeButton(Icons.Filled.TextDecrease) {
+                        fontSize = (fontSize.value - 2f).coerceAtLeast(12f).sp
                     }
-                    if (selectedThread == null && !showContactPicker) {
-                        FontSizeButton(Icons.Filled.TextDecrease) {
-                            fontSize = (fontSize.value - 2f).coerceAtLeast(12f).sp
-                        }
-                        FontSizeButton(Icons.Filled.TextIncrease) {
-                            fontSize = (fontSize.value + 2f).coerceAtMost(32f).sp
-                        }
+                    FontSizeButton(Icons.Filled.TextIncrease) {
+                        fontSize = (fontSize.value + 2f).coerceAtMost(32f).sp
                     }
                 }
             }
         }
 
-        when {
-            showContactPicker -> {
-                ContactPickerList(
-                    contacts = contacts,
-                    onSelect = { contact ->
-                        val thread = conversations.find { it.address == contact.phone }
-                            ?: SmsConversation(-1L, contact.phone, "", System.currentTimeMillis(), false)
-                        selectedThread = thread
-                        selectedName = contact.name
-                        showContactPicker = false
-                    },
-                    onBack = { showContactPicker = false }
-                )
-            }
-            selectedThread != null -> {
-                ConversationView(
-                    thread = selectedThread!!,
-                    fontSize = fontSize,
-                    onBack = { selectedThread = null; selectedName = null },
-                    context = context
-                )
-            }
-            else -> {
-                if (conversations.isEmpty()) {
-                    Box(
-                        modifier = Modifier.weight(1f).fillMaxWidth(),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text("No messages yet.\nTap the pencil to write one.", color = Color(0xFF666666), fontSize = 18.sp)
-                    }
-                } else {
-                    LazyColumn(modifier = Modifier.weight(1f).fillMaxWidth()) {
-                        items(conversations) { conv ->
-                            val name = contacts.find { it.phone == conv.address }?.name
-                            ConversationRow(conversation = conv, displayName = name, fontSize = fontSize) {
-                                selectedThread = conv
-                                selectedName = name
-                            }
-                            HorizontalDivider(color = Color(0xFFEEEEEE), thickness = 1.dp)
-                        }
-                    }
-                }
-                BottomNavBar()
-            }
-        }
-    }
-}
-
-@Composable
-fun ContactPickerList(
-    contacts: List<Contact>,
-    onSelect: (Contact) -> Unit,
-    onBack: () -> Unit
-) {
-    Column(modifier = Modifier.fillMaxSize()) {
-        LazyColumn(modifier = Modifier.weight(1f).fillMaxWidth()) {
-            items(contacts) { contact ->
-                val initials = contact.name.split(" ").take(2)
-                    .mapNotNull { it.firstOrNull()?.uppercaseChar() }.joinToString("")
-                Row(
+        if (selectedThread != null) {
+            ConversationView(
+                thread = selectedThread!!,
+                fontSize = fontSize,
+                onBack = { selectedThread = null },
+                context = context
+            )
+        } else {
+            if (conversations.isEmpty()) {
+                Box(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable { onSelect(contact) }
-                        .padding(horizontal = 16.dp, vertical = 14.dp),
-                    verticalAlignment = Alignment.CenterVertically
+                        .weight(1f)
+                        .fillMaxWidth(),
+                    contentAlignment = Alignment.Center
                 ) {
-                    Box(
-                        modifier = Modifier
-                            .size(48.dp)
-                            .clip(CircleShape)
-                            .background(contact.avatarColor.copy(alpha = 0.15f)),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(initials, color = contact.avatarColor, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
-                    }
-                    Spacer(Modifier.width(14.dp))
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(contact.name, color = Color(0xFF1A1A1A), fontSize = 18.sp, fontWeight = FontWeight.Medium)
-                        Text(contact.phone, color = Color(0xFF888888), fontSize = 14.sp)
+                    Text("No messages found", color = Color(0xFF666666), fontSize = 20.sp)
+                }
+            } else {
+                LazyColumn(
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxWidth()
+                ) {
+                    items(conversations) { conv ->
+                        ConversationRow(conversation = conv, fontSize = fontSize) {
+                            selectedThread = conv
+                        }
+                        HorizontalDivider(color = Color(0xFFEEEEEE), thickness = 1.dp)
                     }
                 }
-                HorizontalDivider(color = Color(0xFFEEEEEE), thickness = 1.dp)
             }
-        }
-        Surface(color = Color(0xFFEEEEEE)) {
-            Button(
-                onClick = onBack,
-                modifier = Modifier.fillMaxWidth().padding(12.dp).height(52.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF333333)),
-                shape = RoundedCornerShape(12.dp)
-            ) {
-                Icon(Icons.Filled.ArrowBack, null, tint = Color.White)
-                Spacer(Modifier.width(8.dp))
-                Text("Cancel", color = Color.White, fontSize = 16.sp)
-            }
+            BottomNavBar()
         }
     }
 }
 
 @Composable
-fun ConversationRow(conversation: SmsConversation, displayName: String? = null, fontSize: TextUnit, onClick: () -> Unit) {
-    val label = displayName ?: conversation.address
-    val initials = label.split(" ").take(2)
-        .mapNotNull { it.firstOrNull()?.uppercaseChar() }.joinToString("")
+fun ConversationRow(conversation: SmsConversation, fontSize: TextUnit, onClick: () -> Unit) {
+    val initials = conversation.address
+        .filter { it.isLetter() }
+        .take(2)
+        .uppercase()
         .ifEmpty { "#" }
 
     Row(
@@ -353,7 +276,7 @@ fun ConversationRow(conversation: SmsConversation, displayName: String? = null, 
 
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                text = label,
+                text = conversation.address,
                 color = Color(0xFF1A1A1A),
                 fontSize = fontSize,
                 fontWeight = if (conversation.unread) FontWeight.Bold else FontWeight.Normal,
