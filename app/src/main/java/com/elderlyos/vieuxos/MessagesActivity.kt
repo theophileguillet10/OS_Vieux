@@ -55,15 +55,17 @@ data class SmsMessage(
 class MessagesActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        val contactName = intent.getStringExtra("contact_name")
+        val contactPhone = intent.getStringExtra("contact_phone")
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_SMS) == PackageManager.PERMISSION_GRANTED) {
-            showMessages()
+            showMessages(contactName, contactPhone)
         } else {
             ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.READ_SMS), 300)
         }
     }
 
-    private fun showMessages() {
-        setContent { MessagesScreen() }
+    private fun showMessages(contactName: String? = null, contactPhone: String? = null) {
+        setContent { MessagesScreen(initialName = contactName, initialPhone = contactPhone) }
     }
 
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<String>, grantResults: IntArray) {
@@ -151,11 +153,20 @@ private fun formatDate(timestamp: Long): String {
 }
 
 @Composable
-fun MessagesScreen() {
+fun MessagesScreen(initialName: String? = null, initialPhone: String? = null) {
     val context = LocalContext.current
     val conversations = remember { loadConversations(context) }
-    var selectedThread by remember { mutableStateOf<SmsConversation?>(null) }
+    // If launched from a contact, pre-open that conversation (or a new one)
+    val initialThread = remember(initialPhone) {
+        if (initialPhone != null) {
+            conversations.find { it.address == initialPhone }
+                ?: SmsConversation(-1L, initialPhone, "", System.currentTimeMillis(), false)
+        } else null
+    }
+    var selectedThread by remember { mutableStateOf<SmsConversation?>(initialThread) }
     var fontSize by remember { mutableStateOf(18.sp) }
+    // Display name: prefer contact name over raw phone number
+    fun displayName(thread: SmsConversation) = if (thread == initialThread && initialName != null) initialName else thread.address
 
     Column(
         modifier = Modifier
@@ -178,7 +189,7 @@ fun MessagesScreen() {
                     Icon(Icons.Filled.Chat, null, tint = Color.White, modifier = Modifier.size(28.dp))
                     Spacer(Modifier.width(10.dp))
                     Text(
-                        text = if (selectedThread != null) selectedThread!!.address else "Messages",
+                        text = if (selectedThread != null) displayName(selectedThread!!) else "Messages",
                         color = Color.White,
                         fontSize = 22.sp,
                         fontWeight = FontWeight.SemiBold,
