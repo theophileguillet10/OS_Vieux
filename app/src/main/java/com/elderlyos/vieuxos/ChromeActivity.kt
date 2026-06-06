@@ -29,7 +29,7 @@ import androidx.compose.ui.viewinterop.AndroidView
 class ChromeActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContent { ChromeScreen() }
+        setContent { NoInternetGuard { ChromeScreen() } }
     }
 }
 

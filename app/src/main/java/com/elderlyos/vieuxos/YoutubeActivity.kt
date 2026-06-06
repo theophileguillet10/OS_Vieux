@@ -19,7 +19,7 @@ import androidx.compose.ui.viewinterop.AndroidView
 class YoutubeActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContent { YoutubeScreen() }
+        setContent { NoInternetGuard { YoutubeScreen() } }
     }
 }
 

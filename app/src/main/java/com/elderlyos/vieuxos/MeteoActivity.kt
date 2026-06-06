@@ -56,7 +56,7 @@ class MeteoActivity : ComponentActivity() {
         ActivityResultContracts.RequestMultiplePermissions()
     ) { grants ->
         if (grants.values.any { it }) {
-            setContent { MeteoScreen() }
+            setContent { NoInternetGuard { MeteoScreen() } }
         }
     }
 
@@ -65,7 +65,7 @@ class MeteoActivity : ComponentActivity() {
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
             == PackageManager.PERMISSION_GRANTED
         ) {
-            setContent { MeteoScreen() }
+            setContent { NoInternetGuard { MeteoScreen() } }
         } else {
             permissionLauncher.launch(
                 arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION)
