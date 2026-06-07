@@ -23,6 +23,7 @@ import androidx.compose.material.icons.filled.TextIncrease
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
+import kotlinx.coroutines.delay
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
@@ -60,10 +61,16 @@ class MessagesActivity : ComponentActivity() {
 
         val contactName = intent.getStringExtra("contact_name")
         val contactPhone = intent.getStringExtra("contact_phone")
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_SMS) == PackageManager.PERMISSION_GRANTED) {
+
+        // Need both READ_SMS (to load conversations) and SEND_SMS (to send messages)
+        val needed = arrayOf(Manifest.permission.READ_SMS, Manifest.permission.SEND_SMS)
+        val missing = needed.filter {
+            ContextCompat.checkSelfPermission(this, it) != PackageManager.PERMISSION_GRANTED
+        }
+        if (missing.isEmpty()) {
             showMessages(contactName, contactPhone)
         } else {
-            ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.READ_SMS), 300)
+            ActivityCompat.requestPermissions(this, missing.toTypedArray(), 300)
         }
     }
 
@@ -73,9 +80,7 @@ class MessagesActivity : ComponentActivity() {
 
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<String>, grantResults: IntArray) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        if (requestCode == 300 && grantResults.firstOrNull() == PackageManager.PERMISSION_GRANTED) {
-            showMessages()
-        }
+        if (requestCode == 300) showMessages()   // show UI regardless; send will fail gracefully if denied
     }
 }
 
@@ -192,7 +197,16 @@ private fun formatDate(timestamp: Long): String {
 @Composable
 fun MessagesScreen(initialName: String? = null, initialPhone: String? = null) {
     val context = LocalContext.current
-    val conversations = remember { loadConversations(context) }
+    var conversations by remember { mutableStateOf(loadConversations(context)) }
+
+    // Auto-refresh conversation list every 3 seconds
+    LaunchedEffect(Unit) {
+        while (true) {
+            delay(3_000)
+            conversations = loadConversations(context)
+        }
+    }
+
     val initialThread = remember(initialPhone) {
         if (initialPhone != null) {
             conversations.find { it.address == initialPhone }
@@ -200,7 +214,7 @@ fun MessagesScreen(initialName: String? = null, initialPhone: String? = null) {
         } else null
     }
     var selectedThread by remember { mutableStateOf<SmsConversation?>(initialThread) }
-    var fontSize by remember { mutableStateOf(18.sp) }
+    var fontSize by remember { mutableStateOf(22.sp) }
     var showContactPicker by remember { mutableStateOf(false) }
 
     // Resolve display name: contact repo first, then passed name, then raw number
@@ -217,6 +231,7 @@ fun MessagesScreen(initialName: String? = null, initialPhone: String? = null) {
         modifier = Modifier
             .fillMaxSize()
             .background(Color.White)
+            .imePadding()
     ) {
         // ── Header ────────────────────────────────────────────────────────────
         Box(
@@ -238,9 +253,9 @@ fun MessagesScreen(initialName: String? = null, initialPhone: String? = null) {
                         Spacer(Modifier.width(8.dp))
                     }
                     Text(
-                        text = if (selectedThread != null) displayName(selectedThread!!) else "💬  Messages",
+                        text = if (selectedThread != null) displayName(selectedThread!!) else "Messages",
                         color = Color.White,
-                        fontSize = 24.sp,
+                        fontSize = 28.sp,
                         fontWeight = FontWeight.SemiBold,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
@@ -269,7 +284,7 @@ fun MessagesScreen(initialName: String? = null, initialPhone: String? = null) {
                 shape = RoundedCornerShape(16.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4527A0))
             ) {
-                Text("✉️  New Message", fontSize = 20.sp, color = Color.White, fontWeight = FontWeight.SemiBold)
+                Text("New Message", fontSize = 22.sp, color = Color.White, fontWeight = FontWeight.SemiBold)
             }
             HorizontalDivider(color = Color(0xFFEEEEEE))
 
@@ -278,7 +293,7 @@ fun MessagesScreen(initialName: String? = null, initialPhone: String? = null) {
                     Text("No messages yet", color = Color(0xFF999999), fontSize = fontSize)
                 }
             } else {
-                LazyColumn(modifier = Modifier.weight(1f)) {
+                LazyColumn(modifier = Modifier.weight(1f), userScrollEnabled = false) {
                     items(conversations) { conv ->
                         ConversationRow(
                             conversation = conv,
@@ -391,8 +406,16 @@ fun ConversationView(
     onBack: () -> Unit,
     context: android.content.Context
 ) {
-    val messages = remember(thread.threadId) { loadMessages(context, thread.threadId) }
+    var messages by remember(thread.threadId) { mutableStateOf(loadMessages(context, thread.threadId)) }
     var messageText by remember { mutableStateOf("") }
+
+    // Auto-refresh messages every 3 seconds
+    LaunchedEffect(thread.threadId) {
+        while (true) {
+            delay(3_000)
+            messages = loadMessages(context, thread.threadId)
+        }
+    }
 
     Column(modifier = Modifier.fillMaxSize()) {
         LazyColumn(
@@ -401,7 +424,8 @@ fun ConversationView(
                 .fillMaxWidth()
                 .background(Color(0xFFF8F8F8))
                 .padding(horizontal = 12.dp, vertical = 8.dp),
-            reverseLayout = true
+            reverseLayout = true,
+            userScrollEnabled = false
         ) {
             items(messages.reversed()) { msg ->
                 MessageBubble(message = msg, fontSize = fontSize)
@@ -443,9 +467,17 @@ fun ConversationView(
                                         @Suppress("DEPRECATION")
                                         SmsManager.getDefault()
                                     }
-                                    smsManager?.sendTextMessage(thread.address, null, text, null, null)
-                                } catch (e: Exception) { /* ignore send errors */ }
-                                messageText = ""
+                                    if (smsManager == null) {
+                                        android.widget.Toast.makeText(context, "SMS not available on this device", android.widget.Toast.LENGTH_LONG).show()
+                                    } else {
+                                        smsManager.sendTextMessage(thread.address, null, text, null, null)
+                                        messageText = ""
+                                        // Reload immediately so the sent message appears right away
+                                        messages = loadMessages(context, thread.threadId)
+                                    }
+                                } catch (e: Exception) {
+                                    android.widget.Toast.makeText(context, "Failed to send: ${e.message}", android.widget.Toast.LENGTH_LONG).show()
+                                }
                             }
                         },
                         modifier = Modifier.size(64.dp),
@@ -465,7 +497,7 @@ fun ConversationView(
                 ) {
                     Icon(Icons.Filled.ArrowBack, null, tint = Color.White)
                     Spacer(Modifier.width(8.dp))
-                    Text("Back to Messages", color = Color.White, fontSize = 16.sp)
+                    Text("Back to Messages", color = Color.White, fontSize = 20.sp)
                 }
             }
         }

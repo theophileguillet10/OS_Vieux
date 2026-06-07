@@ -9,6 +9,7 @@ import android.provider.MediaStore
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.camera.core.Camera
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.ImageCapture
 import androidx.camera.core.ImageCaptureException
@@ -17,15 +18,20 @@ import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.video.*
 import androidx.camera.view.PreviewView
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Text
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Cameraswitch
+import androidx.compose.material.icons.filled.Remove
+import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -42,6 +48,7 @@ class CameraActivity : ComponentActivity() {
     private var imageCapture: ImageCapture? = null
     private var videoCapture: VideoCapture<Recorder>? = null
     private var recording: Recording? = null
+    private var camera: Camera? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -57,11 +64,13 @@ class CameraActivity : ComponentActivity() {
 
     private fun startCamera() {
         setContent {
-            var flashVisible by remember { mutableStateOf(false) }
-            var isRecording by remember { mutableStateOf(false) }
-            var dotVisible by remember { mutableStateOf(true) }
+            var flashVisible   by remember { mutableStateOf(false) }
+            var isRecording    by remember { mutableStateOf(false) }
+            var dotVisible     by remember { mutableStateOf(true) }
+            var useFrontCamera by remember { mutableStateOf(false) }
+            var zoomLevel      by remember { mutableStateOf(0f) }  // 0f = wide, 1f = max
 
-            // Blinking dot effect while recording
+            // Blinking dot while recording
             LaunchedEffect(isRecording) {
                 while (isRecording) {
                     dotVisible = !dotVisible
@@ -72,45 +81,53 @@ class CameraActivity : ComponentActivity() {
 
             Box(modifier = Modifier.fillMaxSize()) {
 
-                // Camera preview — tap to take photo (only when not recording)
-                AndroidView(
-                    factory = { ctx ->
-                        val previewView = PreviewView(ctx)
-                        val cameraProviderFuture = ProcessCameraProvider.getInstance(ctx)
-                        cameraProviderFuture.addListener({
-                            val cameraProvider = cameraProviderFuture.get()
+                // Camera preview — rebuilds when lens changes
+                key(useFrontCamera) {
+                    AndroidView(
+                        factory = { ctx ->
+                            val previewView = PreviewView(ctx)
+                            val cameraProviderFuture = ProcessCameraProvider.getInstance(ctx)
+                            cameraProviderFuture.addListener({
+                                val cameraProvider = cameraProviderFuture.get()
 
-                            val preview = Preview.Builder().build().also {
-                                it.setSurfaceProvider(previewView.surfaceProvider)
+                                val preview = Preview.Builder().build().also {
+                                    it.setSurfaceProvider(previewView.surfaceProvider)
+                                }
+                                imageCapture = ImageCapture.Builder().build()
+                                val recorder = Recorder.Builder()
+                                    .setQualitySelector(QualitySelector.from(Quality.HD))
+                                    .build()
+                                videoCapture = VideoCapture.withOutput(recorder)
+
+                                val selector = if (useFrontCamera)
+                                    CameraSelector.DEFAULT_FRONT_CAMERA
+                                else
+                                    CameraSelector.DEFAULT_BACK_CAMERA
+
+                                cameraProvider.unbindAll()
+                                camera = cameraProvider.bindToLifecycle(
+                                    this@CameraActivity,
+                                    selector,
+                                    preview,
+                                    imageCapture,
+                                    videoCapture
+                                )
+                                // Restore zoom after lens switch
+                                camera?.cameraControl?.setLinearZoom(zoomLevel)
+
+                            }, ContextCompat.getMainExecutor(ctx))
+                            previewView
+                        },
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .clickable {
+                                if (!isRecording) {
+                                    takePhoto()
+                                    flashVisible = true
+                                }
                             }
-
-                            imageCapture = ImageCapture.Builder().build()
-
-                            val recorder = Recorder.Builder()
-                                .setQualitySelector(QualitySelector.from(Quality.HD))
-                                .build()
-                            videoCapture = VideoCapture.withOutput(recorder)
-
-                            cameraProvider.unbindAll()
-                            cameraProvider.bindToLifecycle(
-                                this@CameraActivity,
-                                CameraSelector.DEFAULT_BACK_CAMERA,
-                                preview,
-                                imageCapture,
-                                videoCapture
-                            )
-                        }, ContextCompat.getMainExecutor(ctx))
-                        previewView
-                    },
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .clickable {
-                            if (!isRecording) {
-                                takePhoto()
-                                flashVisible = true
-                            }
-                        }
-                )
+                    )
+                }
 
                 // White flash feedback
                 if (flashVisible) {
@@ -126,37 +143,97 @@ class CameraActivity : ComponentActivity() {
                 // RECORDING indicator
                 if (isRecording) {
                     Row(
-                        modifier = Modifier
-                            .align(Alignment.TopCenter)
-                            .padding(top = 48.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.Center
+                        modifier = Modifier.align(Alignment.TopCenter).padding(top = 48.dp),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
                         if (dotVisible) {
-                            Canvas(modifier = Modifier.size(20.dp)) {
-                                drawCircle(color = Color.Red)
-                            }
+                            Canvas(modifier = Modifier.size(20.dp)) { drawCircle(color = Color.Red) }
                             Spacer(modifier = Modifier.width(12.dp))
                         }
-                        Text(
-                            text = "RECORDING",
-                            color = Color.Red,
-                            fontSize = 36.sp,
-                            fontWeight = FontWeight.ExtraBold
-                        )
+                        Text("RECORDING", color = Color.Red, fontSize = 36.sp, fontWeight = FontWeight.ExtraBold)
                     }
                 }
 
-                // Bottom section
+                // ── Top-right: flip camera button ─────────────────────────────
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(top = 48.dp, end = 20.dp)
+                        .size(64.dp)
+                        .clip(CircleShape)
+                        .background(Color.Black.copy(alpha = 0.5f))
+                        .clickable { useFrontCamera = !useFrontCamera },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        Icons.Filled.Cameraswitch,
+                        contentDescription = "Flip camera",
+                        tint = Color.White,
+                        modifier = Modifier.size(36.dp)
+                    )
+                }
+
+                // ── Right side: zoom controls ─────────────────────────────────
+                Column(
+                    modifier = Modifier
+                        .align(Alignment.CenterEnd)
+                        .padding(end = 16.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    // Zoom in
+                    Box(
+                        modifier = Modifier
+                            .size(52.dp)
+                            .clip(CircleShape)
+                            .background(Color.Black.copy(alpha = 0.5f))
+                            .clickable {
+                                zoomLevel = (zoomLevel + 0.1f).coerceAtMost(1f)
+                                camera?.cameraControl?.setLinearZoom(zoomLevel)
+                            },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(Icons.Filled.Add, null, tint = Color.White, modifier = Modifier.size(28.dp))
+                    }
+                    // Zoom level indicator
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(Color.Black.copy(alpha = 0.5f))
+                            .padding(horizontal = 6.dp, vertical = 4.dp)
+                    ) {
+                        Text(
+                            text = "${"%.1f".format(1f + zoomLevel * 9f)}×",
+                            color = Color.White,
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                    // Zoom out
+                    Box(
+                        modifier = Modifier
+                            .size(52.dp)
+                            .clip(CircleShape)
+                            .background(Color.Black.copy(alpha = 0.5f))
+                            .clickable {
+                                zoomLevel = (zoomLevel - 0.1f).coerceAtLeast(0f)
+                                camera?.cameraControl?.setLinearZoom(zoomLevel)
+                            },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(Icons.Filled.Remove, null, tint = Color.White, modifier = Modifier.size(28.dp))
+                    }
+                }
+
+                // ── Bottom: hint + record button + nav ────────────────────────
                 Column(
                     modifier = Modifier
                         .align(Alignment.BottomCenter)
                         .fillMaxWidth()
                 ) {
-                    // Hint text
                     if (!isRecording) {
                         Text(
-                            text = "Tap anywhere to take a photo",
+                            text = "Tap screen to take a photo",
                             color = Color.White,
                             fontSize = 16.sp,
                             fontWeight = FontWeight.Bold,
@@ -166,15 +243,12 @@ class CameraActivity : ComponentActivity() {
                         )
                     }
 
-                    // Video record button
                     Button(
                         onClick = {
                             if (isRecording) {
-                                stopRecording()
-                                isRecording = false
+                                stopRecording(); isRecording = false
                             } else {
-                                startRecording()
-                                isRecording = true
+                                startRecording(); isRecording = true
                             }
                         },
                         modifier = Modifier
@@ -208,14 +282,11 @@ class CameraActivity : ComponentActivity() {
         val contentValues = ContentValues().apply {
             put(MediaStore.Images.Media.DISPLAY_NAME, fileName)
             put(MediaStore.Images.Media.MIME_TYPE, "image/jpeg")
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q)
                 put(MediaStore.Images.Media.RELATIVE_PATH, "Pictures/VieuxOS")
-            }
         }
         val outputOptions = ImageCapture.OutputFileOptions.Builder(
-            contentResolver,
-            MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
-            contentValues
+            contentResolver, MediaStore.Images.Media.EXTERNAL_CONTENT_URI, contentValues
         ).build()
         imageCapture.takePicture(
             outputOptions,
@@ -238,19 +309,15 @@ class CameraActivity : ComponentActivity() {
             SimpleDateFormat("yyyy-MM-dd-HH-mm-ss", Locale.getDefault())
                 .format(System.currentTimeMillis()) + ".mp4"
         )
-        val outputOptions = FileOutputOptions.Builder(videoFile).build()
-
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO)
-            == PackageManager.PERMISSION_GRANTED) {
+            == PackageManager.PERMISSION_GRANTED
+        ) {
             recording = videoCapture.output
-                .prepareRecording(this, outputOptions)
+                .prepareRecording(this, FileOutputOptions.Builder(videoFile).build())
                 .withAudioEnabled()
                 .start(ContextCompat.getMainExecutor(this)) { event ->
-                    if (event is VideoRecordEvent.Finalize) {
-                        if (!event.hasError()) {
-                            Toast.makeText(this, "Video saved!", Toast.LENGTH_SHORT).show()
-                        }
-                    }
+                    if (event is VideoRecordEvent.Finalize && !event.hasError())
+                        Toast.makeText(this, "Video saved!", Toast.LENGTH_SHORT).show()
                 }
         }
     }
@@ -260,12 +327,9 @@ class CameraActivity : ComponentActivity() {
         recording = null
     }
 
-    override fun onRequestPermissionsResult(
-        requestCode: Int, permissions: Array<String>, grantResults: IntArray
-    ) {
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<String>, grantResults: IntArray) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        if (requestCode == 100 && grantResults.all { it == PackageManager.PERMISSION_GRANTED }) {
+        if (requestCode == 100 && grantResults.all { it == PackageManager.PERMISSION_GRANTED })
             startCamera()
-        }
     }
 }

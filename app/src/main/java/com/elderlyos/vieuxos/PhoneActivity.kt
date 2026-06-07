@@ -20,6 +20,8 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -152,18 +154,17 @@ fun PhoneScreen(onRequestDefaultDialer: () -> Unit) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(PH_SURFACE)
+                .background(Color(0xFF2E7D32))
                 .padding(horizontal = 20.dp, vertical = 16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = "📞  Phone",
-                color = PH_TEXT_PRI,
+                text = "Phone",
+                color = Color.White,
                 fontSize = 30.sp,
                 fontWeight = FontWeight.SemiBold
             )
         }
-        HorizontalDivider(color = PH_BORDER, thickness = 1.dp)
 
         // ── Contact list ──────────────────────────────────────────────────────
         LazyColumn(
@@ -213,7 +214,9 @@ fun PhoneScreen(onRequestDefaultDialer: () -> Unit) {
                 modifier = Modifier.weight(1f).height(64.dp),
                 shape = RoundedCornerShape(16.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = PH_BTN_DARK)
-            ) { Text("▲  Up", fontSize = 18.sp, color = Color.White) }
+            ) {
+                Icon(Icons.Filled.KeyboardArrowUp, null, tint = Color.White, modifier = Modifier.size(36.dp))
+            }
 
             Button(
                 onClick = {
@@ -224,7 +227,9 @@ fun PhoneScreen(onRequestDefaultDialer: () -> Unit) {
                 modifier = Modifier.weight(1f).height(64.dp),
                 shape = RoundedCornerShape(16.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = PH_BTN_DARK)
-            ) { Text("▼  Down", fontSize = 18.sp, color = Color.White) }
+            ) {
+                Icon(Icons.Filled.KeyboardArrowDown, null, tint = Color.White, modifier = Modifier.size(36.dp))
+            }
 
             Button(
                 onClick = { showAddDialog = true },
@@ -305,7 +310,7 @@ fun ContactRow(contact: Contact, avatarColor: Color, onClick: () -> Unit) {
         Column(modifier = Modifier.weight(1f)) {
             Text(text = contact.name, color = PH_TEXT_PRI, fontSize = 24.sp, fontWeight = FontWeight.Medium)
             Spacer(modifier = Modifier.height(4.dp))
-            Text(text = contact.phone, color = PH_TEXT_SEC, fontSize = 18.sp)
+            Text(text = contact.phone, color = PH_TEXT_SEC, fontSize = 22.sp)
         }
         Box(
             modifier = Modifier

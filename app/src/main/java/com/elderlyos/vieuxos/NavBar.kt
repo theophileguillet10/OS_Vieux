@@ -2,7 +2,6 @@ package com.elderlyos.vieuxos
 
 import android.app.Activity
 import android.content.Intent
-import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -21,9 +20,10 @@ import androidx.compose.ui.unit.dp
 
 @Composable
 fun BottomNavBar(
-    onLeft: (() -> Unit)? = null,
+    onBack:  (() -> Unit)? = null,   // null = finish current activity
+    onLeft:  (() -> Unit)? = null,
     onRight: (() -> Unit)? = null,
-    onHome: (() -> Unit)? = null
+    onHome:  (() -> Unit)? = null    // null = launch MainActivity
 ) {
     val context = LocalContext.current
 
@@ -35,27 +35,33 @@ fun BottomNavBar(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 8.dp, vertical = 12.dp),
-            horizontalArrangement = Arrangement.SpaceEvenly,
+                .padding(horizontal = 4.dp, vertical = 8.dp),
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            NavIconButton(Icons.Filled.ArrowBack) {
-                (context as? Activity)?.finish()
+            // Back button
+            NavIconButton(Icons.Filled.ArrowBack, Modifier.weight(1f)) {
+                if (onBack != null) onBack()
+                else (context as? Activity)?.finish()
             }
-            NavIconButton(Icons.Filled.KeyboardArrowLeft) {
+            // Left
+            NavIconButton(Icons.Filled.KeyboardArrowLeft, Modifier.weight(1f)) {
                 onLeft?.invoke()
             }
-            NavIconButton(Icons.Filled.Home) {
+            // Home
+            NavIconButton(Icons.Filled.Home, Modifier.weight(1f)) {
                 if (onHome != null) {
                     onHome()
                 } else {
-                    val intent = Intent(context, MainActivity::class.java).apply {
-                        flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
-                    }
-                    context.startActivity(intent)
+                    context.startActivity(
+                        Intent(context, MainActivity::class.java).apply {
+                            flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
+                        }
+                    )
                 }
             }
-            NavIconButton(Icons.Filled.KeyboardArrowRight) {
+            // Right
+            NavIconButton(Icons.Filled.KeyboardArrowRight, Modifier.weight(1f)) {
                 onRight?.invoke()
             }
         }
@@ -63,10 +69,10 @@ fun BottomNavBar(
 }
 
 @Composable
-fun NavIconButton(icon: ImageVector, onClick: () -> Unit) {
+fun NavIconButton(icon: ImageVector, modifier: Modifier = Modifier, onClick: () -> Unit) {
     Button(
         onClick = onClick,
-        modifier = Modifier.width(110.dp).height(80.dp),
+        modifier = modifier.height(80.dp),
         shape = RoundedCornerShape(16.dp),
         colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFCCCCCC)),
         contentPadding = PaddingValues(0.dp),
@@ -76,7 +82,7 @@ fun NavIconButton(icon: ImageVector, onClick: () -> Unit) {
             imageVector = icon,
             contentDescription = null,
             tint = Color(0xFF222222),
-            modifier = Modifier.size(40.dp)
+            modifier = Modifier.size(48.dp)
         )
     }
 }

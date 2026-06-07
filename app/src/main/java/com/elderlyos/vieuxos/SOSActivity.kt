@@ -79,10 +79,9 @@ class SOSActivity : ComponentActivity() {
 fun SOSScreen() {
     val context = LocalContext.current
 
-    // ── Persistent state via SharedPreferences ────────────────────────────────
-    val prefs = remember { context.getSharedPreferences("sos_prefs", Context.MODE_PRIVATE) }
-    var meetLink by remember { mutableStateOf(prefs.getString("meet_link", "") ?: "") }
-    var showLinkDialog by remember { mutableStateOf(false) }
+    // ── Read Meet link from main prefs (configured in developer mode) ─────────
+    val prefs = remember { context.getSharedPreferences("vieuxos_prefs", Context.MODE_PRIVATE) }
+    val meetLink = prefs.getString("meet_link", "") ?: ""
     var showContactPicker by remember { mutableStateOf(false) }
     var showConfirm by remember { mutableStateOf(false) }
     var selectedContact by remember { mutableStateOf<Contact?>(null) }
@@ -118,13 +117,7 @@ fun SOSScreen() {
 
         // ── Big SOS button ────────────────────────────────────────────────────
         Button(
-            onClick = {
-                if (meetLink.isBlank()) {
-                    showLinkDialog = true
-                } else {
-                    showContactPicker = true
-                }
-            },
+            onClick = { showContactPicker = true },
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 32.dp)
@@ -168,92 +161,24 @@ fun SOSScreen() {
             Spacer(modifier = Modifier.height(16.dp))
         }
 
-        // ── Meet link card ────────────────────────────────────────────────────
-        Surface(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 32.dp)
-                .clickable { showLinkDialog = true },
-            shape = RoundedCornerShape(20.dp),
-            color = SURFACE,
-            tonalElevation = 2.dp
-        ) {
-            Row(
-                modifier = Modifier.padding(20.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(52.dp)
-                        .clip(CircleShape)
-                        .background(BLUE_LIGHT),
-                    contentAlignment = Alignment.Center
-                ) { Text("🔗", fontSize = 24.sp) }
-
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = "Google Meet link",
-                        color = TEXT_SEC,
-                        fontSize = 14.sp
-                    )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        text = if (meetLink.isBlank()) "Tap to set up" else meetLink,
-                        color = if (meetLink.isBlank()) RED else BLUE,
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.Medium
-                    )
-                }
-
-                Text("✏️", fontSize = 20.sp)
-            }
-        }
-
-        Spacer(modifier = Modifier.height(16.dp))
-
         // ── Info card ─────────────────────────────────────────────────────────
+        val s = getStrings(context)
         Surface(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 32.dp),
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 32.dp),
             shape = RoundedCornerShape(20.dp),
             color = BLUE_LIGHT,
             tonalElevation = 0.dp
         ) {
             Column(modifier = Modifier.padding(20.dp)) {
-                Text(
-                    text = "ℹ️  How it works",
-                    color = BLUE,
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.SemiBold
-                )
+                Text(s.howItWorks, color = BLUE, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
                 Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    text = "1. Tap CALL FOR HELP\n2. Choose who to contact\n3. They receive an SMS with the Meet link\n4. The Meet room opens on your phone",
-                    color = Color(0xFF1A3A6B),
-                    fontSize = 15.sp,
-                    lineHeight = 22.sp
-                )
+                Text(s.howItWorksBody, color = Color(0xFF1A3A6B), fontSize = 15.sp, lineHeight = 22.sp)
             }
         }
 
         Spacer(modifier = Modifier.weight(1f))
         HorizontalDivider(color = BORDER, thickness = 1.dp)
         BottomNavBar()
-    }
-
-    // ── Dialog: set Meet link ─────────────────────────────────────────────────
-    if (showLinkDialog) {
-        MeetLinkDialog(
-            currentLink = meetLink,
-            onDismiss = { showLinkDialog = false },
-            onConfirm = { link ->
-                meetLink = link.trim()
-                prefs.edit().putString("meet_link", meetLink).apply()
-                showLinkDialog = false
-            }
-        )
     }
 
     // ── Contact picker ────────────────────────────────────────────────────────
@@ -324,72 +249,6 @@ private fun openMeetLink(context: Context, meetLink: String) {
         flags = Intent.FLAG_ACTIVITY_NEW_TASK
     }
     context.startActivity(intent)
-}
-
-// ── Dialog: set/edit Meet link ────────────────────────────────────────────────
-@Composable
-fun MeetLinkDialog(
-    currentLink: String,
-    onDismiss: () -> Unit,
-    onConfirm: (String) -> Unit
-) {
-    var link by remember { mutableStateOf(currentLink) }
-
-    Dialog(onDismissRequest = onDismiss) {
-        Surface(
-            shape = RoundedCornerShape(24.dp),
-            color = SURFACE,
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Column(modifier = Modifier.padding(24.dp)) {
-                Text(
-                    "Set Meet link",
-                    color = TEXT_PRI, fontSize = 22.sp, fontWeight = FontWeight.SemiBold
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    "Create a Google Meet room at meet.google.com and paste the link here. Share it with your family so they can join.",
-                    color = TEXT_SEC, fontSize = 14.sp, lineHeight = 20.sp
-                )
-                Spacer(modifier = Modifier.height(16.dp))
-                OutlinedTextField(
-                    value = link,
-                    onValueChange = { link = it },
-                    label = { Text("meet.google.com/xxx-xxxx-xxx") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth(),
-                    textStyle = LocalTextStyle.current.copy(fontSize = 16.sp, color = TEXT_PRI),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = BLUE,
-                        unfocusedBorderColor = BORDER,
-                        focusedLabelColor = BLUE,
-                        unfocusedLabelColor = TEXT_SEC,
-                        cursorColor = TEXT_PRI,
-                    )
-                )
-                Spacer(modifier = Modifier.height(20.dp))
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    OutlinedButton(
-                        onClick = onDismiss,
-                        modifier = Modifier.weight(1f).height(52.dp),
-                        shape = RoundedCornerShape(14.dp),
-                        colors = ButtonDefaults.outlinedButtonColors(contentColor = TEXT_SEC)
-                    ) { Text("Cancel", fontSize = 16.sp) }
-
-                    Button(
-                        onClick = { onConfirm(link) },
-                        enabled = link.isNotBlank(),
-                        modifier = Modifier.weight(1f).height(52.dp),
-                        shape = RoundedCornerShape(14.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = BLUE)
-                    ) { Text("Save", fontSize = 16.sp, color = Color.White) }
-                }
-            }
-        }
-    }
 }
 
 // ── Dialog: pick a contact ────────────────────────────────────────────────────

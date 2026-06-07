@@ -6,9 +6,7 @@ import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Event
@@ -59,17 +57,17 @@ fun CalendarScreen() {
             contentAlignment = Alignment.Center
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Filled.CalendarMonth, null, tint = Color.White, modifier = Modifier.size(28.dp))
+                Icon(Icons.Filled.CalendarMonth, null, tint = Color.White, modifier = Modifier.size(34.dp))
                 Spacer(Modifier.width(10.dp))
                 Text(
                     monthFmt.format(today.time).replaceFirstChar { it.uppercaseChar() },
-                    color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold
+                    color = Color.White, fontSize = 28.sp, fontWeight = FontWeight.Bold
                 )
             }
         }
 
         Column(
-            modifier = Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(16.dp),
+            modifier = Modifier.weight(1f).padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             weekDays.forEach { day ->
@@ -109,7 +107,7 @@ fun WeekDayCard(dayName: String, dayNum: String, isToday: Boolean, events: List<
                     .padding(horizontal = 16.dp, vertical = 10.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text("$dayName $dayNum", color = headerText, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                Text("$dayName $dayNum", color = headerText, fontSize = 26.sp, fontWeight = FontWeight.Bold)
                 if (isToday) {
                     Spacer(Modifier.width(10.dp))
                     Surface(shape = RoundedCornerShape(8.dp), color = Color.White.copy(alpha = 0.25f)) {
@@ -118,16 +116,16 @@ fun WeekDayCard(dayName: String, dayNum: String, isToday: Boolean, events: List<
                 }
             }
             if (events.isEmpty()) {
-                Text("No events", color = Color(0xFFAAAAAA), fontSize = 16.sp, modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp))
+                Text("No events", color = Color(0xFFAAAAAA), fontSize = 20.sp, modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp))
             } else {
                 events.forEach { event ->
                     Row(
                         modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Icon(Icons.Filled.Event, null, tint = Color(0xFF3949AB), modifier = Modifier.size(20.dp))
+                        Icon(Icons.Filled.Event, null, tint = Color(0xFF3949AB), modifier = Modifier.size(26.dp))
                         Spacer(Modifier.width(10.dp))
-                        Text(event.title, color = Color(0xFF222222), fontSize = 18.sp, fontWeight = FontWeight.Medium)
+                        Text(event.title, color = Color(0xFF222222), fontSize = 22.sp, fontWeight = FontWeight.Medium)
                     }
                     HorizontalDivider(color = Color(0xFFF0F0F0), thickness = 0.5.dp, modifier = Modifier.padding(horizontal = 16.dp))
                 }

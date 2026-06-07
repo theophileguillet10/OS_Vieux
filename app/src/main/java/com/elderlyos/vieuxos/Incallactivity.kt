@@ -2,6 +2,8 @@ package com.elderlyos.vieuxos
 
 import android.content.Context
 import android.media.AudioManager
+import android.media.AudioDeviceInfo
+import android.os.Build
 import android.os.Bundle
 import android.telecom.Call
 import androidx.activity.ComponentActivity
@@ -93,14 +95,41 @@ fun InCallScreen(
 ) {
     val context = LocalContext.current
     var callState by remember { mutableStateOf(initialState) }
-    var isSpeaker by remember { mutableStateOf(false) }
+    var isSpeaker by remember { mutableStateOf(true) } // auto-enable speaker for seniors
     var elapsedSeconds by remember { mutableStateOf(0) }
     var callStarted by remember { mutableStateOf(callState == Call.STATE_ACTIVE) }
 
+    // Route audio to speaker or back to earpiece
+    fun setSpeaker(context: Context, on: Boolean) {
+        val am = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            if (on) {
+                val speaker = am.availableCommunicationDevices
+                    .firstOrNull { it.type == AudioDeviceInfo.TYPE_BUILTIN_SPEAKER }
+                if (speaker != null) am.setCommunicationDevice(speaker)
+            } else {
+                // Route back to earpiece when speaker is turned off
+                val earpiece = am.availableCommunicationDevices
+                    .firstOrNull { it.type == AudioDeviceInfo.TYPE_BUILTIN_EARPIECE }
+                if (earpiece != null) am.setCommunicationDevice(earpiece)
+                else am.clearCommunicationDevice()
+            }
+        } else {
+            @Suppress("DEPRECATION")
+            am.mode = AudioManager.MODE_IN_CALL   // required before routing on older APIs
+            @Suppress("DEPRECATION")
+            am.isSpeakerphoneOn = on
+        }
+    }
+
     LaunchedEffect(Unit) {
+        setSpeaker(context, true) // turn on speaker right away
         onRegisterStateCallback { newState ->
             callState = newState
-            if (newState == Call.STATE_ACTIVE) callStarted = true
+            if (newState == Call.STATE_ACTIVE) {
+                callStarted = true
+                setSpeaker(context, isSpeaker)
+            }
             if (newState == Call.STATE_DISCONNECTED) onFinish()
         }
     }
@@ -204,9 +233,9 @@ fun InCallScreen(
         // ── Speaker button ────────────────────────────────────────────────────
         Button(
             onClick = {
-                isSpeaker = !isSpeaker
-                val am = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
-                am.isSpeakerphoneOn = isSpeaker
+                val newValue = !isSpeaker
+                isSpeaker = newValue
+                setSpeaker(context, newValue)   // use local var to avoid stale state read
             },
             modifier = Modifier
                 .fillMaxWidth()

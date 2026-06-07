@@ -6,11 +6,6 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.animateColor
-import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
@@ -37,14 +32,30 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import android.bluetooth.BluetoothAdapter
+import android.bluetooth.BluetoothManager
 import android.content.BroadcastReceiver
 import android.content.IntentFilter
+import android.net.ConnectivityManager
+import android.net.NetworkCapabilities
 import android.os.BatteryManager
+import android.os.Build
+import android.telephony.SmsManager
+import android.view.WindowInsetsController
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import kotlinx.coroutines.delay
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // Hide the system navigation bar (immersive mode)
+        WindowCompat.setDecorFitsSystemWindows(window, false)
+        val controller = WindowInsetsControllerCompat(window, window.decorView)
+        controller.hide(WindowInsetsCompat.Type.systemBars())
+        controller.systemBarsBehavior =
+            WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
         setContent { HomeScreen() }
     }
 }
@@ -85,6 +96,39 @@ fun HomeScreen() {
         onDispose { context.unregisterReceiver(br) }
     }
 
+    var isWifiConnected by remember { mutableStateOf(false) }
+    var isBluetoothEnabled by remember { mutableStateOf(false) }
+    DisposableEffect(Unit) {
+        fun checkWifi() {
+            val cm = context.getSystemService(ConnectivityManager::class.java)
+            val caps = cm?.activeNetwork?.let { cm.getNetworkCapabilities(it) }
+            isWifiConnected = caps?.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) == true
+        }
+        fun checkBt() {
+            isBluetoothEnabled = try {
+                context.getSystemService(BluetoothManager::class.java)?.adapter?.isEnabled == true
+            } catch (e: Exception) { false }
+        }
+        checkWifi(); checkBt()
+        val receiver = object : BroadcastReceiver() {
+            override fun onReceive(ctx: android.content.Context, intent: Intent) {
+                when (intent.action) {
+                    ConnectivityManager.CONNECTIVITY_ACTION -> checkWifi()
+                    BluetoothAdapter.ACTION_STATE_CHANGED -> {
+                        val state = intent.getIntExtra(BluetoothAdapter.EXTRA_STATE, -1)
+                        isBluetoothEnabled = state == BluetoothAdapter.STATE_ON
+                    }
+                }
+            }
+        }
+        val combined = IntentFilter().apply {
+            addAction(ConnectivityManager.CONNECTIVITY_ACTION)
+            addAction(BluetoothAdapter.ACTION_STATE_CHANGED)
+        }
+        context.registerReceiver(receiver, combined)
+        onDispose { context.unregisterReceiver(receiver) }
+    }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -120,6 +164,24 @@ fun HomeScreen() {
                 color = Color(0xFF333333),
                 modifier = Modifier.align(Alignment.Center)
             )
+            Row(
+                modifier = Modifier.align(Alignment.CenterStart),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    imageVector = if (isWifiConnected) Icons.Filled.Wifi else Icons.Filled.WifiOff,
+                    contentDescription = null,
+                    tint = if (isWifiConnected) Color(0xFF2E7D32) else Color(0xFF9E9E9E),
+                    modifier = Modifier.size(36.dp)
+                )
+                Spacer(Modifier.width(8.dp))
+                Icon(
+                    imageVector = if (isBluetoothEnabled) Icons.Filled.Bluetooth else Icons.Filled.BluetoothDisabled,
+                    contentDescription = null,
+                    tint = if (isBluetoothEnabled) Color(0xFF1565C0) else Color(0xFF9E9E9E),
+                    modifier = Modifier.size(36.dp)
+                )
+            }
             val batteryIcon = when {
                 isCharging -> Icons.Filled.BatteryChargingFull
                 batteryPct >= 80 -> Icons.Filled.BatteryFull
@@ -172,49 +234,51 @@ fun HomeScreen() {
 
 @Composable
 fun PageOne(context: android.content.Context) {
+    val s = getStrings(context)
+    var showSOSDialog by remember { mutableStateOf(false) }
+
     Column(modifier = Modifier.fillMaxSize()) {
         LazyVerticalGrid(
             columns = GridCells.Fixed(2),
-            modifier = Modifier
-                .padding(16.dp),
+            modifier = Modifier.padding(16.dp),
             horizontalArrangement = Arrangement.spacedBy(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
         item {
-            AppTile("Call Family", Icons.Filled.Phone, Color(0xFF2E7D32)) {
+            AppTile(s.callFamily, Icons.Filled.Phone, Color(0xFF2E7D32)) {
                 context.startActivity(Intent(context, PhoneActivity::class.java))
             }
         }
         item {
-            AppTile("Take Me Home", Icons.Filled.Home, Color(0xFF00838F)) {
+            AppTile(s.takeHome, Icons.Filled.Home, Color(0xFF00838F)) {
                 context.startActivity(Intent(context, GoHomeActivity::class.java))
             }
         }
         item {
-            AppTile("Camera", Icons.Filled.PhotoCamera, Color(0xFF6A1B9A)) {
+            AppTile(s.camera, Icons.Filled.PhotoCamera, Color(0xFF6A1B9A)) {
                 context.startActivity(Intent(context, CameraActivity::class.java))
             }
         }
         item {
-            AppTile("Gallery", Icons.Filled.PhotoLibrary, Color(0xFFF57C00)) {
+            AppTile(s.gallery, Icons.Filled.PhotoLibrary, Color(0xFFF57C00)) {
                 context.startActivity(Intent(context, GalleryActivity::class.java))
             }
         }
         item {
-            AppTile("Messages", Icons.Filled.Chat, Color(0xFF4527A0)) {
+            AppTile(s.messages, Icons.Filled.Chat, Color(0xFF4527A0)) {
                 context.startActivity(Intent(context, MessagesActivity::class.java))
             }
         }
         item {
             AppTile(
-                label = "SOS",
+                label = s.sos,
                 icon = Icons.Filled.Warning,
                 color = Color(0xFFC62828),
                 onLongClick = {
                     context.startActivity(Intent(context, FamilySetupActivity::class.java))
                 }
             ) {
-                context.startActivity(Intent(context, SOSActivity::class.java))
+                showSOSDialog = true
             }
         }
         }
@@ -226,10 +290,19 @@ fun PageOne(context: android.content.Context) {
                 .padding(horizontal = 16.dp, vertical = 8.dp)
         )
     }
+
+    // ── SOS confirmation dialog ───────────────────────────────────────────────
+    if (showSOSDialog) {
+        SOSConfirmDialog(
+            context   = context,
+            onDismiss = { showSOSDialog = false }
+        )
+    }
 }
 
 @Composable
 fun PageTwo(context: android.content.Context) {
+    val s = getStrings(context)
     Column(modifier = Modifier.fillMaxSize()) {
         LazyVerticalGrid(
             columns = GridCells.Fixed(2),
@@ -238,18 +311,28 @@ fun PageTwo(context: android.content.Context) {
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             item {
-                AppTile("YouTube", Icons.Filled.PlayCircle, Color(0xFFCC0000)) {
+                AppTile(s.youtube, Icons.Filled.PlayCircle, Color(0xFFCC0000)) {
                     context.startActivity(Intent(context, YoutubeActivity::class.java))
                 }
             }
             item {
-                AppTile("Internet", Icons.Filled.Language, Color(0xFF1A73E8)) {
+                AppTile(s.internet, Icons.Filled.Language, Color(0xFF1A73E8)) {
                     context.startActivity(Intent(context, ChromeActivity::class.java))
                 }
             }
             item {
-                AppTile("Weather", Icons.Filled.WbSunny, Color(0xFFFFA000)) {
+                AppTile(s.weather, Icons.Filled.WbSunny, Color(0xFFFFA000)) {
                     context.startActivity(Intent(context, MeteoActivity::class.java))
+                }
+            }
+            item {
+                AppTile(s.wallet, Icons.Filled.CreditCard, Color(0xFF00695C)) {
+                    context.startActivity(Intent(context, WalletActivity::class.java))
+                }
+            }
+            item {
+                AppTile(s.torch, Icons.Filled.Bolt, Color(0xFF455A64)) {
+                    context.startActivity(Intent(context, TorchActivity::class.java))
                 }
             }
         }
@@ -302,7 +385,7 @@ fun AppTile(
             Spacer(modifier = Modifier.height(14.dp))
             Text(
                 text = label,
-                fontSize = 18.sp,
+                fontSize = 26.sp,
                 fontWeight = FontWeight.SemiBold,
                 color = Color.White,
                 textAlign = TextAlign.Center
@@ -326,16 +409,8 @@ fun MedicationBanner(modifier: Modifier = Modifier) {
     val medications = remember { loadMedications(context) }
     var currentIndex by remember { mutableIntStateOf(0) }
 
-    val infiniteTransition = rememberInfiniteTransition(label = "banner_color")
-    val animatedColor by infiniteTransition.animateColor(
-        initialValue = bannerColors[0],
-        targetValue = bannerColors[1],
-        animationSpec = infiniteRepeatable(
-            animation = tween(1200, easing = LinearEasing),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "bg_color"
-    )
+    // Static color — changes only when the displayed medication changes (no flashing)
+    val bannerColor = bannerColors[currentIndex % bannerColors.size]
 
     LaunchedEffect(medications.size) {
         while (medications.isNotEmpty()) {
@@ -345,7 +420,7 @@ fun MedicationBanner(modifier: Modifier = Modifier) {
     }
 
     Box(
-        modifier = modifier.background(animatedColor, RoundedCornerShape(16.dp)),
+        modifier = modifier.background(bannerColor, RoundedCornerShape(16.dp)),
         contentAlignment = Alignment.Center
     ) {
         if (medications.isEmpty()) {
@@ -433,6 +508,100 @@ fun BigButton(label: String, color: Color, icon: ImageVector? = null, onClick: (
                 fontWeight = FontWeight.SemiBold,
                 color = Color.White
             )
+        }
+    }
+}
+
+// ── SOS: send SMS to all contacts ─────────────────────────────────────────────
+private fun sendSOSMessages(context: android.content.Context) {
+    val prefs    = context.getSharedPreferences("vieuxos_prefs", android.content.Context.MODE_PRIVATE)
+    val meetLink = prefs.getString("meet_link", "") ?: ""
+    val contacts = loadContacts(context)
+    val message  = if (meetLink.isNotBlank())
+        "I need help! Please join me: $meetLink"
+    else
+        "I need help! Please contact me as soon as possible."
+
+    try {
+        val smsManager = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            context.getSystemService(SmsManager::class.java)
+        } else {
+            @Suppress("DEPRECATION")
+            SmsManager.getDefault()
+        }
+        contacts.forEach { contact ->
+            val number = contact.phone.replace(" ", "")
+            smsManager?.sendTextMessage(number, null, message, null, null)
+        }
+    } catch (e: Exception) { e.printStackTrace() }
+
+    // Open Meet link if set
+    if (meetLink.isNotBlank()) {
+        val url = if (meetLink.startsWith("http")) meetLink else "https://$meetLink"
+        context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK
+        })
+    }
+}
+
+// ── SOS confirmation dialog ───────────────────────────────────────────────────
+@Composable
+fun SOSConfirmDialog(context: android.content.Context, onDismiss: () -> Unit) {
+    androidx.compose.ui.window.Dialog(onDismissRequest = onDismiss) {
+        Box(
+            modifier = androidx.compose.ui.Modifier
+                .fillMaxWidth()
+                .background(Color(0xFFB71C1C), RoundedCornerShape(24.dp))
+                .padding(32.dp)
+        ) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Icon(
+                    Icons.Filled.Warning,
+                    contentDescription = null,
+                    tint = Color.White,
+                    modifier = androidx.compose.ui.Modifier.size(64.dp)
+                )
+                Spacer(androidx.compose.ui.Modifier.height(16.dp))
+                Text(
+                    text = "Send SOS?",
+                    color = Color.White,
+                    fontSize = 28.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                    textAlign = TextAlign.Center
+                )
+                Spacer(androidx.compose.ui.Modifier.height(8.dp))
+                Text(
+                    text = "An emergency message will be sent to all your contacts.",
+                    color = Color.White.copy(alpha = 0.85f),
+                    fontSize = 18.sp,
+                    textAlign = TextAlign.Center,
+                    lineHeight = 24.sp
+                )
+                Spacer(androidx.compose.ui.Modifier.height(28.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                    // Cancel
+                    Button(
+                        onClick = onDismiss,
+                        modifier = androidx.compose.ui.Modifier.weight(1f).height(64.dp),
+                        shape = RoundedCornerShape(16.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF555555))
+                    ) {
+                        Text("Cancel", fontSize = 20.sp, color = Color.White, fontWeight = FontWeight.Bold)
+                    }
+                    // Confirm
+                    Button(
+                        onClick = {
+                            onDismiss()
+                            sendSOSMessages(context)
+                        },
+                        modifier = androidx.compose.ui.Modifier.weight(1f).height(64.dp),
+                        shape = RoundedCornerShape(16.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = Color.White)
+                    ) {
+                        Text("SEND", fontSize = 20.sp, color = Color(0xFFB71C1C), fontWeight = FontWeight.ExtraBold)
+                    }
+                }
+            }
         }
     }
 }
