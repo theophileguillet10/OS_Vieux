@@ -26,6 +26,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Cameraswitch
+import androidx.compose.material.icons.filled.FlashOff
+import androidx.compose.material.icons.filled.FlashOn
 import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -69,6 +71,7 @@ class CameraActivity : ComponentActivity() {
             var dotVisible     by remember { mutableStateOf(true) }
             var useFrontCamera by remember { mutableStateOf(false) }
             var zoomLevel      by remember { mutableStateOf(0f) }  // 0f = wide, 1f = max
+            var torchEnabled   by remember { mutableStateOf(false) }
 
             // Blinking dot while recording
             LaunchedEffect(isRecording) {
@@ -114,6 +117,11 @@ class CameraActivity : ComponentActivity() {
                                 )
                                 // Restore zoom after lens switch
                                 camera?.cameraControl?.setLinearZoom(zoomLevel)
+                                // Front camera has no torch — reset state
+                                if (useFrontCamera) {
+                                    torchEnabled = false
+                                    camera?.cameraControl?.enableTorch(false)
+                                }
 
                             }, ContextCompat.getMainExecutor(ctx))
                             previewView
@@ -154,23 +162,58 @@ class CameraActivity : ComponentActivity() {
                     }
                 }
 
-                // ── Top-right: flip camera button ─────────────────────────────
-                Box(
+                // ── Top-right: flip + flash buttons ───────────────────────────
+                Column(
                     modifier = Modifier
                         .align(Alignment.TopEnd)
-                        .padding(top = 48.dp, end = 20.dp)
-                        .size(64.dp)
-                        .clip(CircleShape)
-                        .background(Color.Black.copy(alpha = 0.5f))
-                        .clickable { useFrontCamera = !useFrontCamera },
-                    contentAlignment = Alignment.Center
+                        .padding(top = 48.dp, end = 20.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    Icon(
-                        Icons.Filled.Cameraswitch,
-                        contentDescription = "Flip camera",
-                        tint = Color.White,
-                        modifier = Modifier.size(36.dp)
-                    )
+                    // Flip camera
+                    Box(
+                        modifier = Modifier
+                            .size(64.dp)
+                            .clip(CircleShape)
+                            .background(Color.Black.copy(alpha = 0.5f))
+                            .clickable { useFrontCamera = !useFrontCamera },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            Icons.Filled.Cameraswitch,
+                            contentDescription = "Flip camera",
+                            tint = Color.White,
+                            modifier = Modifier.size(36.dp)
+                        )
+                    }
+                    // Flash / torch (back camera only)
+                    if (!useFrontCamera) {
+                        Box(
+                            modifier = Modifier
+                                .size(64.dp)
+                                .clip(CircleShape)
+                                .background(
+                                    if (torchEnabled) Color(0xFFFFC107).copy(alpha = 0.9f)
+                                    else Color.Black.copy(alpha = 0.5f)
+                                )
+                                .clickable {
+                                    torchEnabled = !torchEnabled
+                                    camera?.cameraControl?.enableTorch(torchEnabled)
+                                    imageCapture?.flashMode = if (torchEnabled)
+                                        ImageCapture.FLASH_MODE_ON
+                                    else
+                                        ImageCapture.FLASH_MODE_OFF
+                                },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                if (torchEnabled) Icons.Filled.FlashOn else Icons.Filled.FlashOff,
+                                contentDescription = "Flash",
+                                tint = if (torchEnabled) Color.Black else Color.White,
+                                modifier = Modifier.size(36.dp)
+                            )
+                        }
+                    }
                 }
 
                 // ── Right side: zoom controls ─────────────────────────────────
