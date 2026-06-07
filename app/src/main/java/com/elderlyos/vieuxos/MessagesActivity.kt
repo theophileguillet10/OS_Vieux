@@ -277,7 +277,7 @@ fun MessagesScreen(initialName: String? = null, initialPhone: String? = null) {
                 shape = RoundedCornerShape(16.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4527A0))
             ) {
-                Text("✉️  New Message", fontSize = 22.sp, color = Color.White, fontWeight = FontWeight.SemiBold)
+                Text("✉️  New Message", fontSize = 26.sp, color = Color.White, fontWeight = FontWeight.SemiBold)
             }
             HorizontalDivider(color = Color(0xFFEEEEEE))
 

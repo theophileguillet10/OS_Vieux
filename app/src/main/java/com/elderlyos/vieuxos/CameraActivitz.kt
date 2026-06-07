@@ -205,7 +205,7 @@ class CameraActivity : ComponentActivity() {
                         Text(
                             text = "${"%.1f".format(1f + zoomLevel * 9f)}×",
                             color = Color.White,
-                            fontSize = 14.sp,
+                            fontSize = 18.sp,
                             fontWeight = FontWeight.Bold
                         )
                     }
@@ -235,7 +235,7 @@ class CameraActivity : ComponentActivity() {
                         Text(
                             text = "Tap screen to take a photo",
                             color = Color.White,
-                            fontSize = 16.sp,
+                            fontSize = 20.sp,
                             fontWeight = FontWeight.Bold,
                             modifier = Modifier
                                 .align(Alignment.CenterHorizontally)
@@ -262,7 +262,7 @@ class CameraActivity : ComponentActivity() {
                     ) {
                         Text(
                             text = if (isRecording) "Stop Recording" else "Record Video",
-                            fontSize = 22.sp,
+                            fontSize = 26.sp,
                             fontWeight = FontWeight.Bold,
                             color = Color.White
                         )

@@ -236,7 +236,7 @@ fun PhoneScreen(onRequestDefaultDialer: () -> Unit) {
                 modifier = Modifier.weight(1f).height(64.dp),
                 shape = RoundedCornerShape(16.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = PH_BLUE)
-            ) { Text("＋  Add", fontSize = 18.sp, color = Color.White) }
+            ) { Text("＋  Add", fontSize = 24.sp, color = Color.White) }
         }
 
         BottomNavBar()
@@ -304,13 +304,13 @@ fun ContactRow(contact: Contact, avatarColor: Color, onClick: () -> Unit) {
                 .background(avatarColor.copy(alpha = 0.15f)),
             contentAlignment = Alignment.Center
         ) {
-            Text(text = initials, color = avatarColor, fontSize = 22.sp, fontWeight = FontWeight.Bold)
+            Text(text = initials, color = avatarColor, fontSize = 26.sp, fontWeight = FontWeight.Bold)
         }
         Spacer(modifier = Modifier.width(16.dp))
         Column(modifier = Modifier.weight(1f)) {
-            Text(text = contact.name, color = PH_TEXT_PRI, fontSize = 24.sp, fontWeight = FontWeight.Medium)
+            Text(text = contact.name, color = PH_TEXT_PRI, fontSize = 26.sp, fontWeight = FontWeight.Medium)
             Spacer(modifier = Modifier.height(4.dp))
-            Text(text = contact.phone, color = PH_TEXT_SEC, fontSize = 22.sp)
+            Text(text = contact.phone, color = PH_TEXT_SEC, fontSize = 24.sp)
         }
         Box(
             modifier = Modifier
@@ -342,7 +342,7 @@ fun AddContactDialog(onDismiss: () -> Unit, onConfirm: (String, String) -> Unit)
                 Spacer(modifier = Modifier.height(20.dp))
                 OutlinedTextField(
                     value = name, onValueChange = { name = it },
-                    label = { Text("Name", fontSize = 18.sp) },
+                    label = { Text("Name", fontSize = 22.sp) },
                     singleLine = true, modifier = Modifier.fillMaxWidth(),
                     textStyle = LocalTextStyle.current.copy(fontSize = 20.sp, color = PH_TEXT_PRI),
                     colors = OutlinedTextFieldDefaults.colors(
@@ -356,7 +356,7 @@ fun AddContactDialog(onDismiss: () -> Unit, onConfirm: (String, String) -> Unit)
                 Spacer(modifier = Modifier.height(14.dp))
                 OutlinedTextField(
                     value = phone, onValueChange = { phone = it },
-                    label = { Text("Phone number", fontSize = 18.sp) },
+                    label = { Text("Phone number", fontSize = 22.sp) },
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
                     modifier = Modifier.fillMaxWidth(),
@@ -379,7 +379,7 @@ fun AddContactDialog(onDismiss: () -> Unit, onConfirm: (String, String) -> Unit)
                         modifier = Modifier.weight(1f).height(56.dp),
                         shape = RoundedCornerShape(14.dp),
                         colors = ButtonDefaults.outlinedButtonColors(contentColor = PH_TEXT_SEC)
-                    ) { Text("Cancel", fontSize = 18.sp) }
+                    ) { Text("Cancel", fontSize = 22.sp) }
 
                     Button(
                         onClick = { onConfirm(name, phone) },
@@ -387,7 +387,7 @@ fun AddContactDialog(onDismiss: () -> Unit, onConfirm: (String, String) -> Unit)
                         modifier = Modifier.weight(1f).height(56.dp),
                         shape = RoundedCornerShape(14.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = PH_BLUE)
-                    ) { Text("Add", fontSize = 18.sp, color = Color.White) }
+                    ) { Text("Add", fontSize = 22.sp, color = Color.White) }
                 }
             }
         }
