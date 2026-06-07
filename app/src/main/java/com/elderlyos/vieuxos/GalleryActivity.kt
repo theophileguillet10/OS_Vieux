@@ -23,6 +23,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -31,7 +32,7 @@ import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import coil.compose.AsyncImage
 
-private const val PHOTOS_PER_PAGE = 9   // 3 × 3 grid
+private const val PHOTOS_PER_PAGE = 9
 
 sealed class MediaItem {
     data class Photo(val uri: android.net.Uri) : MediaItem()
@@ -62,11 +63,8 @@ class GalleryActivity : ComponentActivity() {
     }
 }
 
-// ── Media loading ─────────────────────────────────────────────────────────────
-
 private fun loadMedia(context: android.content.Context): List<MediaItem> {
     val items = mutableListOf<Pair<Long, MediaItem>>()
-
     context.contentResolver.query(
         MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
         arrayOf(MediaStore.Images.Media._ID, MediaStore.Images.Media.DATE_ADDED),
@@ -81,7 +79,6 @@ private fun loadMedia(context: android.content.Context): List<MediaItem> {
             ))
         }
     }
-
     context.contentResolver.query(
         MediaStore.Video.Media.EXTERNAL_CONTENT_URI,
         arrayOf(MediaStore.Video.Media._ID, MediaStore.Video.Media.DATE_ADDED),
@@ -96,27 +93,21 @@ private fun loadMedia(context: android.content.Context): List<MediaItem> {
             ))
         }
     }
-
     return items.sortedByDescending { it.first }.map { it.second }
 }
-
-// ── Screens ───────────────────────────────────────────────────────────────────
 
 @Composable
 fun GalleryScreen() {
     val context   = LocalContext.current
-    val s         = getStrings(context)
     val media     = remember { loadMedia(context) }
     val pageCount = if (media.isEmpty()) 1 else (media.size + PHOTOS_PER_PAGE - 1) / PHOTOS_PER_PAGE
 
     var page          by remember { mutableIntStateOf(0) }
     var selectedIndex by remember { mutableStateOf<Int?>(null) }
 
-    // ── Photo viewer ──────────────────────────────────────────────────────────
     if (selectedIndex != null) {
         val item = media[selectedIndex!!]
         if (item is MediaItem.Video) {
-            // Open videos in system player, then return to grid
             context.startActivity(
                 Intent(Intent.ACTION_VIEW).apply {
                     setDataAndType(item.uri, "video/*")
@@ -135,12 +126,10 @@ fun GalleryScreen() {
         }
     }
 
-    // ── Grid view ─────────────────────────────────────────────────────────────
     val pageItems = media.drop(page * PHOTOS_PER_PAGE).take(PHOTOS_PER_PAGE)
 
     Column(modifier = Modifier.fillMaxSize().background(Color(0xFFF5F5F5))) {
 
-        // Header
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -150,7 +139,7 @@ fun GalleryScreen() {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(Icons.Filled.PhotoLibrary, null, tint = Color.White, modifier = Modifier.size(32.dp))
                 Spacer(Modifier.width(12.dp))
-                Text(s.galleryTitle, color = Color.White, fontSize = 26.sp, fontWeight = FontWeight.SemiBold)
+                Text("📷  Gallery", color = Color.White, fontSize = 26.sp, fontWeight = FontWeight.SemiBold)
             }
             if (pageCount > 1) {
                 Text(
@@ -164,10 +153,9 @@ fun GalleryScreen() {
 
         if (media.isEmpty()) {
             Box(modifier = Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
-                Text(s.noMedia, color = Color(0xFF666666), fontSize = 20.sp)
+                Text("No photos yet", color = Color(0xFF666666), fontSize = 20.sp)
             }
         } else {
-            // 3×3 grid — each row takes equal weight so all rows fill the available height
             val cols = 3
             val rows = 3
             Column(
@@ -180,12 +168,12 @@ fun GalleryScreen() {
                         horizontalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
                         for (col in 0 until cols) {
-                            val localIdx = row * cols + col
+                            val localIdx    = row * cols + col
                             val globalIndex = page * PHOTOS_PER_PAGE + localIdx
                             if (localIdx < pageItems.size) {
                                 val item = pageItems[localIdx]
-                                val uri = if (item is MediaItem.Photo) item.uri
-                                          else (item as MediaItem.Video).uri
+                                val uri  = if (item is MediaItem.Photo) item.uri
+                                else (item as MediaItem.Video).uri
                                 Box(
                                     modifier = Modifier
                                         .weight(1f)
@@ -211,7 +199,6 @@ fun GalleryScreen() {
                                     }
                                 }
                             } else {
-                                // Empty cell filler so spacing stays consistent
                                 Spacer(modifier = Modifier.weight(1f))
                             }
                         }
@@ -220,7 +207,6 @@ fun GalleryScreen() {
             }
         }
 
-        // ← prev page | home | → next page
         BottomNavBar(
             onLeft  = if (page > 0) ({ page-- }) else null,
             onRight = if (page < pageCount - 1) ({ page++ }) else null
@@ -230,33 +216,55 @@ fun GalleryScreen() {
 
 @Composable
 fun PhotoViewer(
-    media:        List<MediaItem>,
-    currentIndex: Int,
+    media:         List<MediaItem>,
+    currentIndex:  Int,
     onIndexChange: (Int) -> Unit,
-    onBack:       () -> Unit
+    onBack:        () -> Unit
 ) {
     val uri = (media[currentIndex] as? MediaItem.Photo)?.uri ?: run { onBack(); return }
 
-    // Photo indices only (skip videos for prev/next navigation)
     val photoIndices = media.indices.filter { media[it] is MediaItem.Photo }
-    val prevIndex    = photoIndices.lastOrNull { it < currentIndex }
+    val prevIndex    = photoIndices.lastOrNull  { it < currentIndex }
     val nextIndex    = photoIndices.firstOrNull { it > currentIndex }
 
-    // Reset zoom and pan when photo changes
-    var scale  by remember(currentIndex) { mutableStateOf(1f) }
+    var scale   by remember(currentIndex) { mutableStateOf(1f) }
     var offsetX by remember(currentIndex) { mutableStateOf(0f) }
     var offsetY by remember(currentIndex) { mutableStateOf(0f) }
 
-    // How many pixels to pan per button press
+    // Container size in pixels — needed to compute pan bounds
+    var containerW by remember { mutableStateOf(0f) }
+    var containerH by remember { mutableStateOf(0f) }
+
     val panStep = 200f
+
+    /**
+     * Maximum translation so the image edge never goes past the container edge.
+     *
+     * When scale > 1, the image is (scale × containerW) wide.
+     * The extra pixels on each side = (scale - 1) × containerW / 2.
+     * We can pan up to that amount in either direction.
+     *
+     *   maxOffsetX = (scale - 1) × containerW / 2
+     *   maxOffsetY = (scale - 1) × containerH / 2
+     */
+    fun clampOffset(ox: Float, oy: Float): Pair<Float, Float> {
+        val maxX = ((scale - 1f) * containerW / 2f).coerceAtLeast(0f)
+        val maxY = ((scale - 1f) * containerH / 2f).coerceAtLeast(0f)
+        return ox.coerceIn(-maxX, maxX) to oy.coerceIn(-maxY, maxY)
+    }
 
     Column(modifier = Modifier.fillMaxSize().background(Color.Black)) {
 
         Box(
-            modifier = Modifier.weight(1f).fillMaxWidth(),
+            modifier = Modifier
+                .weight(1f)
+                .fillMaxWidth()
+                .onSizeChanged { size ->
+                    containerW = size.width.toFloat()
+                    containerH = size.height.toFloat()
+                },
             contentAlignment = Alignment.Center
         ) {
-            // Photo
             AsyncImage(
                 model = uri,
                 contentDescription = null,
@@ -271,7 +279,7 @@ fun PhotoViewer(
                     )
             )
 
-            // ── Zoom buttons — right side, vertically centred ─────────────────
+            // ── Zoom buttons — right side ─────────────────────────────────────
             Column(
                 modifier = Modifier
                     .align(Alignment.CenterEnd)
@@ -281,6 +289,9 @@ fun PhotoViewer(
             ) {
                 OverlayButton("+") {
                     scale = (scale + 0.5f).coerceAtMost(6f)
+                    // Re-clamp after zoom — bounds shrink when zooming out
+                    val (cx, cy) = clampOffset(offsetX, offsetY)
+                    offsetX = cx; offsetY = cy
                 }
                 Text(
                     text = "${"%.1f".format(scale)}×",
@@ -290,12 +301,15 @@ fun PhotoViewer(
                 )
                 OverlayButton("−") {
                     scale = (scale - 0.5f).coerceAtLeast(1f)
-                    // Reset pan if fully zoomed out
                     if (scale == 1f) { offsetX = 0f; offsetY = 0f }
+                    else {
+                        val (cx, cy) = clampOffset(offsetX, offsetY)
+                        offsetX = cx; offsetY = cy
+                    }
                 }
             }
 
-            // ── D-pad — left side, vertically centred (only when zoomed in) ──
+            // ── D-pad — left side (only when zoomed in) ───────────────────────
             if (scale > 1f) {
                 Column(
                     modifier = Modifier
@@ -304,21 +318,36 @@ fun PhotoViewer(
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    // Up   → translationY negative moves image UP
-                    OverlayIconButton(Icons.Filled.KeyboardArrowUp)    { offsetY -= panStep }
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        // Left  → translationX negative moves image LEFT
-                        OverlayIconButton(Icons.Filled.KeyboardArrowLeft)  { offsetX -= panStep }
-                        // Right → translationX positive moves image RIGHT
-                        OverlayIconButton(Icons.Filled.KeyboardArrowRight) { offsetX += panStep }
+                    // ▲ — scroll up → offsetY increases (image shifts down = viewport moves up)
+                    OverlayIconButton(Icons.Filled.KeyboardArrowUp) {
+                        val (cx, cy) = clampOffset(offsetX, offsetY + panStep)
+                        offsetX = cx; offsetY = cy
                     }
-                    // Down  → translationY positive moves image DOWN
-                    OverlayIconButton(Icons.Filled.KeyboardArrowDown)  { offsetY += panStep }
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        // ◀ — scroll left → offsetX increases
+                        OverlayIconButton(Icons.Filled.KeyboardArrowLeft) {
+                            val (cx, cy) = clampOffset(offsetX + panStep, offsetY)
+                            offsetX = cx; offsetY = cy
+                        }
+                        // ⊙ — recenter
+                        OverlayButton("⊙") {
+                            offsetX = 0f; offsetY = 0f
+                        }
+                        // ▶ — scroll right → offsetX decreases
+                        OverlayIconButton(Icons.Filled.KeyboardArrowRight) {
+                            val (cx, cy) = clampOffset(offsetX - panStep, offsetY)
+                            offsetX = cx; offsetY = cy
+                        }
+                    }
+                    // ▼ — scroll down → offsetY decreases
+                    OverlayIconButton(Icons.Filled.KeyboardArrowDown) {
+                        val (cx, cy) = clampOffset(offsetX, offsetY - panStep)
+                        offsetX = cx; offsetY = cy
+                    }
                 }
             }
         }
 
-        // Nav bar: back = return to gallery, left = prev photo, home = home, right = next photo
         BottomNavBar(
             onBack  = onBack,
             onLeft  = prevIndex?.let { idx -> { onIndexChange(idx) } },
