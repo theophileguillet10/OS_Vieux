@@ -128,22 +128,36 @@ fun YoutubeScreen(
                     }
 
                     webViewClient = object : WebViewClient() {
+                        override fun shouldOverrideUrlLoading(
+                            view: WebView,
+                            request: WebResourceRequest
+                        ): Boolean {
+                            val url = request.url.toString()
+                            // Allow only http/https — block every app-scheme redirect
+                            return !url.startsWith("http://") && !url.startsWith("https://")
+                        }
+
                         override fun onPageFinished(view: WebView?, url: String?) {
-                            // Auto-accept Google/YouTube consent wall
                             view?.evaluateJavascript("""
                                 (function() {
+                                    // Force window.open() to navigate in the same WebView
+                                    // so YouTube video popups load without needing a child WebView
+                                    window.open = function(u) {
+                                        if (u) window.location.href = u;
+                                    };
+                                    // Auto-accept consent wall
                                     var btns = document.querySelectorAll('button');
                                     for (var b of btns) {
                                         var t = (b.innerText || b.textContent || '').trim();
                                         if (t === 'Accept all' || t === 'Accepter tout' ||
-                                            t === 'Accepteer alles' || t === 'Alle akzeptieren') {
+                                            t === 'Tout accepter' || t === 'Alle akzeptieren') {
                                             b.click(); return;
                                         }
                                     }
                                     for (var b of btns) {
                                         var t = (b.innerText || b.textContent || '').trim();
                                         if (t.startsWith('Accept') || t.startsWith('Accepter') ||
-                                            t.startsWith('Accepteer')) {
+                                            t.startsWith('Tout')) {
                                             b.click(); return;
                                         }
                                     }
@@ -157,11 +171,7 @@ fun YoutubeScreen(
                             progress = newProgress
                         }
 
-                        // ── Required for video playback to work ──────────────
-                        override fun onShowCustomView(
-                            view: View,
-                            callback: CustomViewCallback
-                        ) {
+                        override fun onShowCustomView(view: View, callback: CustomViewCallback) {
                             onShowCustomView(view, callback)
                         }
 
@@ -169,24 +179,44 @@ fun YoutubeScreen(
                             onHideCustomView()
                         }
 
-                        // YouTube opens a new window for the video player —
-                        // load it in the same WebView so it renders correctly.
+                        // Fallback if window.open override didn't catch it:
+                        // attach the popup WebView to the activity so JS executes,
+                        // then redirect its first URL back into the main WebView.
                         override fun onCreateWindow(
                             view: WebView,
                             isDialog: Boolean,
                             isUserGesture: Boolean,
                             resultMsg: android.os.Message
                         ): Boolean {
-                            val newWebView = WebView(view.context)
-                            newWebView.settings.javaScriptEnabled = true
-                            newWebView.webViewClient = object : WebViewClient() {
-                                override fun shouldOverrideUrlLoading(v: WebView, r: WebResourceRequest): Boolean {
-                                    view.loadUrl(r.url.toString())
-                                    return true
+                            val popupWebView = WebView(view.context).apply {
+                                setLayerType(View.LAYER_TYPE_HARDWARE, null)
+                                settings.javaScriptEnabled = true
+                                settings.domStorageEnabled = true
+                                @Suppress("DEPRECATION")
+                                settings.mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
+                                settings.userAgentString =
+                                    "Mozilla/5.0 (Linux; Android 13; Pixel 7) " +
+                                    "AppleWebKit/537.36 (KHTML, like Gecko) " +
+                                    "Chrome/124.0.0.0 Mobile Safari/537.36"
+                                webViewClient = object : WebViewClient() {
+                                    override fun shouldOverrideUrlLoading(
+                                        v: WebView, r: WebResourceRequest
+                                    ): Boolean {
+                                        val u = r.url.toString()
+                                        if (u.startsWith("http://") || u.startsWith("https://")) {
+                                            view.loadUrl(u)
+                                        }
+                                        return true
+                                    }
                                 }
                             }
+                            // Must be attached to the view hierarchy for JS to run
+                            val decorView = (view.context as android.app.Activity)
+                                .window.decorView as android.widget.FrameLayout
+                            decorView.addView(popupWebView,
+                                android.widget.FrameLayout.LayoutParams(1, 1))
                             val transport = resultMsg.obj as WebView.WebViewTransport
-                            transport.webView = newWebView
+                            transport.webView = popupWebView
                             resultMsg.sendToTarget()
                             return true
                         }
@@ -195,11 +225,8 @@ fun YoutubeScreen(
                     val cm = android.webkit.CookieManager.getInstance()
                     cm.setAcceptCookie(true)
                     cm.setAcceptThirdPartyCookies(this, true)
-                    // Pre-accept Google/YouTube consent so the cookie wall is skipped
-                    cm.setCookie(".youtube.com", "SOCS=CAISNQgDEitib3FfaWRlbnRpdHlmcm9udGVuZHVpc2VydmljZXNfMjAyMzA4MDItMF9SQzEaAnhh")
-                    cm.setCookie(".google.com",  "SOCS=CAISNQgDEitib3FfaWRlbnRpdHlmcm9udGVuZHVpc2VydmljZXNfMjAyMzA4MDItMF9SQzEaAnhh")
 
-                    loadUrl("https://m.youtube.com")
+                    loadUrl("https://www.youtube.com")
                     webView = this
                 }
             }
