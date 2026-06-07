@@ -87,12 +87,10 @@ private const val PREFS = "vieuxos_prefs"
 // ── Contacts ──────────────────────────────────────────────────────────────────
 
 private val defaultContacts = listOf(
-    Contact("Maman",        "+33 6 12 34 56 78"),
-    Contact("Papa",         "+33 6 98 76 54 32"),
-    Contact("Marie",        "+33 6 11 22 33 44"),
-    Contact("Pierre",       "+33 6 55 66 77 88"),
-    Contact("Docteur Brun", "+33 1 42 00 11 22"),
-    Contact("Pharmacie",    "+33 1 45 67 89 00"),
+    Contact("Pauline",        "+41 78 699 52 05"),
+    Contact("Axel",         "+41 77 422 67 08"),
+    Contact("Martin",        "+41 79 582 26 63"),
+    Contact("Théo",       "+33 7 68 88 91 50"),
 )
 
 fun loadContacts(context: Context): List<Contact> {
@@ -116,8 +114,6 @@ data class Medication(val name: String, val meal: String)
 
 private val defaultMedications = listOf(
     Medication("Doliprane 1000mg", "Breakfast"),
-    Medication("Metformine 500mg", "Lunch"),
-    Medication("Amlodipine 5mg",   "Dinner"),
 )
 
 fun loadMedications(context: Context): List<Medication> {
@@ -142,28 +138,6 @@ data class CalEvent(val month: Int, val day: Int, val title: String)
 private val defaultEvents = listOf(
     CalEvent(6,  6,  "Doctor appointment"),
     CalEvent(6,  6,  "Take medication at breakfast"),
-    CalEvent(6,  7,  "Morning walk"),
-    CalEvent(6,  7,  "Call Marie"),
-    CalEvent(6,  8,  "Birthday Maman"),
-    CalEvent(6,  8,  "Family dinner"),
-    CalEvent(6,  9,  "Pharmacy"),
-    CalEvent(6,  9,  "Physical therapy"),
-    CalEvent(6,  10, "Family lunch"),
-    CalEvent(6,  10, "Grocery shopping"),
-    CalEvent(6,  11, "Rest day"),
-    CalEvent(6,  11, "Video call with Pierre"),
-    CalEvent(6,  12, "Cardiology checkup"),
-    CalEvent(6,  12, "Afternoon nap"),
-    CalEvent(6,  13, "Hairdresser"),
-    CalEvent(6,  13, "Call Nathalie"),
-    CalEvent(6,  14, "Birthday Pierre"),
-    CalEvent(6,  14, "Church"),
-    CalEvent(6,  15, "Blood test at clinic"),
-    CalEvent(6,  16, "Lunch with Jean-Claude"),
-    CalEvent(6,  17, "Ophthalmologist"),
-    CalEvent(6,  18, "Visit from Marie"),
-    CalEvent(6,  19, "Dentist"),
-    CalEvent(6,  20, "Family barbecue"),
 )
 
 fun loadEvents(context: Context): List<CalEvent> {
