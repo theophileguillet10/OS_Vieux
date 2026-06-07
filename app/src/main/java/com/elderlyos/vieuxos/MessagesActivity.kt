@@ -2,8 +2,10 @@ package com.elderlyos.vieuxos
 
 import android.Manifest
 import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Bundle
 import android.provider.Telephony
+import android.telephony.SmsManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
@@ -11,10 +13,9 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import android.os.Build
-import android.telephony.SmsManager
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Send
@@ -23,7 +24,6 @@ import androidx.compose.material.icons.filled.TextIncrease
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
-import kotlinx.coroutines.delay
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
@@ -35,6 +35,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -55,14 +57,9 @@ data class SmsMessage(
 class MessagesActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
-        // Init shared contact repository
         ContactRepository.init(this)
-
         val contactName = intent.getStringExtra("contact_name")
         val contactPhone = intent.getStringExtra("contact_phone")
-
-        // Need both READ_SMS (to load conversations) and SEND_SMS (to send messages)
         val needed = arrayOf(Manifest.permission.READ_SMS, Manifest.permission.SEND_SMS)
         val missing = needed.filter {
             ContextCompat.checkSelfPermission(this, it) != PackageManager.PERMISSION_GRANTED
@@ -80,11 +77,10 @@ class MessagesActivity : ComponentActivity() {
 
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<String>, grantResults: IntArray) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        if (requestCode == 300) showMessages()   // show UI regardless; send will fail gracefully if denied
+        if (requestCode == 300) showMessages()
     }
 }
 
-// ── Resolve a phone number to a contact name from the repository ──────────────
 private fun resolveContactName(phone: String): String {
     val normalized = phone.replace(" ", "").replace("-", "")
     return ContactRepository.contacts.find { contact ->
@@ -99,7 +95,7 @@ private const val FAKE_THREAD_ID = -99L
 private val fakeConversations = listOf(
     SmsConversation(
         threadId = FAKE_THREAD_ID,
-        address  = "+33 6 12 34 56 78",   // matches "Mum" in ContactRepository
+        address  = "+33 6 12 34 56 78",
         snippet  = "Don't forget your doctor's appointment tomorrow!",
         date     = System.currentTimeMillis() - 3_600_000,
         unread   = true
@@ -119,10 +115,7 @@ private fun loadConversations(context: android.content.Context): List<SmsConvers
     try {
         val cursor = context.contentResolver.query(
             Telephony.Sms.Conversations.CONTENT_URI,
-            arrayOf(
-                Telephony.Sms.Conversations.THREAD_ID,
-                Telephony.Sms.Conversations.SNIPPET
-            ),
+            arrayOf(Telephony.Sms.Conversations.THREAD_ID, Telephony.Sms.Conversations.SNIPPET),
             null, null,
             "${Telephony.Sms.Conversations.DEFAULT_SORT_ORDER}"
         )
@@ -149,18 +142,13 @@ private fun loadConversations(context: android.content.Context): List<SmsConvers
                 }
             }
         }
-    } catch (e: Exception) { /* return empty list if SMS reading fails */ }
-
+    } catch (e: Exception) { /* ignore */ }
     val real = conversations.sortedByDescending { it.date }
-    // Inject fake conversation for UI testing when no real SMS exist
     return if (real.isEmpty()) fakeConversations else real
 }
 
-
 private fun loadMessages(context: android.content.Context, threadId: Long): List<SmsMessage> {
-    // Return fake messages for the test thread
     if (threadId == FAKE_THREAD_ID) return fakeMessages
-
     val messages = mutableListOf<SmsMessage>()
     try {
         context.contentResolver.query(
@@ -174,10 +162,11 @@ private fun loadMessages(context: android.content.Context, threadId: Long): List
             val dateCol = cursor.getColumnIndexOrThrow(Telephony.Sms.DATE)
             val typeCol = cursor.getColumnIndexOrThrow(Telephony.Sms.TYPE)
             while (cursor.moveToNext()) {
-                val body = cursor.getString(bodyCol) ?: ""
-                val date = cursor.getLong(dateCol)
-                val type = cursor.getInt(typeCol)
-                messages.add(SmsMessage(body, date, type == Telephony.Sms.MESSAGE_TYPE_INBOX))
+                messages.add(SmsMessage(
+                    cursor.getString(bodyCol) ?: "",
+                    cursor.getLong(dateCol),
+                    cursor.getInt(typeCol) == Telephony.Sms.MESSAGE_TYPE_INBOX
+                ))
             }
         }
     } catch (e: Exception) { /* ignore */ }
@@ -185,12 +174,37 @@ private fun loadMessages(context: android.content.Context, threadId: Long): List
 }
 
 private fun formatDate(timestamp: Long): String {
-    val now = System.currentTimeMillis()
-    val diff = now - timestamp
+    val diff = System.currentTimeMillis() - timestamp
     return when {
-        diff < 86_400_000 -> SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(timestamp))
-        diff < 604_800_000 -> SimpleDateFormat("EEE", Locale.getDefault()).format(Date(timestamp))
-        else -> SimpleDateFormat("dd/MM", Locale.getDefault()).format(Date(timestamp))
+        diff < 86_400_000  -> SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(timestamp))
+        diff < 604_800_000 -> SimpleDateFormat("EEE",   Locale.getDefault()).format(Date(timestamp))
+        else               -> SimpleDateFormat("dd/MM", Locale.getDefault()).format(Date(timestamp))
+    }
+}
+
+// ── Shared scroll button bar ──────────────────────────────────────────────────
+@Composable
+fun ScrollButtons(onUp: () -> Unit, onDown: () -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(Color(0xFFF5F5F5))
+            .padding(horizontal = 12.dp, vertical = 8.dp),
+        horizontalArrangement = Arrangement.spacedBy(10.dp)
+    ) {
+        Button(
+            onClick = onUp,
+            modifier = Modifier.weight(1f).height(58.dp),
+            shape = RoundedCornerShape(14.dp),
+            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF424242))
+        ) { Text("▲  Up", fontSize = 18.sp, color = Color.White) }
+
+        Button(
+            onClick = onDown,
+            modifier = Modifier.weight(1f).height(58.dp),
+            shape = RoundedCornerShape(14.dp),
+            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF424242))
+        ) { Text("▼  Down", fontSize = 18.sp, color = Color.White) }
     }
 }
 
@@ -199,7 +213,6 @@ fun MessagesScreen(initialName: String? = null, initialPhone: String? = null) {
     val context = LocalContext.current
     var conversations by remember { mutableStateOf(loadConversations(context)) }
 
-    // Auto-refresh conversation list every 3 seconds
     LaunchedEffect(Unit) {
         while (true) {
             delay(3_000)
@@ -217,11 +230,15 @@ fun MessagesScreen(initialName: String? = null, initialPhone: String? = null) {
     var fontSize by remember { mutableStateOf(22.sp) }
     var showContactPicker by remember { mutableStateOf(false) }
 
-    // Resolve display name: contact repo first, then passed name, then raw number
+    // Scroll state for the conversation list
+    val convListState = rememberLazyListState()
+    val convScope = rememberCoroutineScope()
+    val visibleCount = 4
+
     fun displayName(thread: SmsConversation): String {
         val fromRepo = resolveContactName(thread.address)
         return when {
-            fromRepo != thread.address -> fromRepo          // found in repo
+            fromRepo != thread.address -> fromRepo
             thread == initialThread && initialName != null -> initialName
             else -> thread.address
         }
@@ -284,7 +301,7 @@ fun MessagesScreen(initialName: String? = null, initialPhone: String? = null) {
                 shape = RoundedCornerShape(16.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4527A0))
             ) {
-                Text("New Message", fontSize = 22.sp, color = Color.White, fontWeight = FontWeight.SemiBold)
+                Text("✉️  New Message", fontSize = 22.sp, color = Color.White, fontWeight = FontWeight.SemiBold)
             }
             HorizontalDivider(color = Color(0xFFEEEEEE))
 
@@ -293,7 +310,11 @@ fun MessagesScreen(initialName: String? = null, initialPhone: String? = null) {
                     Text("No messages yet", color = Color(0xFF999999), fontSize = fontSize)
                 }
             } else {
-                LazyColumn(modifier = Modifier.weight(1f), userScrollEnabled = false) {
+                LazyColumn(
+                    state = convListState,
+                    userScrollEnabled = false,
+                    modifier = Modifier.weight(1f)
+                ) {
                     items(conversations) { conv ->
                         ConversationRow(
                             conversation = conv,
@@ -304,26 +325,46 @@ fun MessagesScreen(initialName: String? = null, initialPhone: String? = null) {
                     }
                 }
             }
+
+            // ── ▲ ▼ for conversation list ─────────────────────────────────────
+            ScrollButtons(
+                onUp = {
+                    convScope.launch {
+                        convListState.animateScrollToItem(
+                            maxOf(0, convListState.firstVisibleItemIndex - visibleCount)
+                        )
+                    }
+                },
+                onDown = {
+                    convScope.launch {
+                        convListState.animateScrollToItem(
+                            minOf(conversations.size - 1, convListState.firstVisibleItemIndex + visibleCount)
+                        )
+                    }
+                }
+            )
         } else {
+            // ConversationView fills the rest; BottomNavBar is below it
             ConversationView(
                 thread = selectedThread!!,
                 fontSize = fontSize,
-                onBack = { selectedThread = null },
-                context = context
+                context = context,
+                modifier = Modifier.weight(1f)
             )
         }
 
-        BottomNavBar()
+        // ── NavBar always visible ─────────────────────────────────────────────
+        BottomNavBar(
+            onBack = { if (selectedThread != null) selectedThread = null }
+        )
     }
 
-    // ── Contact picker for new message ────────────────────────────────────────
     if (showContactPicker) {
         ContactPickerDialog(
             contacts = ContactRepository.contacts,
             onDismiss = { showContactPicker = false },
             onSelect = { contact ->
                 showContactPicker = false
-                // Open or reuse existing thread for this contact
                 val existing = conversations.find { conv ->
                     resolveContactName(conv.address) == contact.name ||
                             conv.address.replace(" ", "") == contact.phone.replace(" ", "")
@@ -403,13 +444,15 @@ fun ConversationRow(
 fun ConversationView(
     thread: SmsConversation,
     fontSize: TextUnit,
-    onBack: () -> Unit,
-    context: android.content.Context
+    context: android.content.Context,
+    modifier: Modifier = Modifier
 ) {
     var messages by remember(thread.threadId) { mutableStateOf(loadMessages(context, thread.threadId)) }
     var messageText by remember { mutableStateOf("") }
+    val msgListState = rememberLazyListState()
+    val msgScope = rememberCoroutineScope()
+    val visibleCount = 3
 
-    // Auto-refresh messages every 3 seconds
     LaunchedEffect(thread.threadId) {
         while (true) {
             delay(3_000)
@@ -417,8 +460,10 @@ fun ConversationView(
         }
     }
 
-    Column(modifier = Modifier.fillMaxSize()) {
+    Column(modifier = modifier.fillMaxWidth()) {
+        // ── Message bubbles ───────────────────────────────────────────────────
         LazyColumn(
+            state = msgListState,
             modifier = Modifier
                 .weight(1f)
                 .fillMaxWidth()
@@ -433,71 +478,84 @@ fun ConversationView(
             }
         }
 
-        Surface(color = Color(0xFFEEEEEE)) {
-            Column(modifier = Modifier.fillMaxWidth().padding(12.dp)) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    OutlinedTextField(
-                        value = messageText,
-                        onValueChange = { messageText = it },
-                        placeholder = { Text("Write a message…", fontSize = fontSize) },
-                        modifier = Modifier.weight(1f),
-                        shape = RoundedCornerShape(24.dp),
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedTextColor = Color(0xFF1A1A1A),
-                            unfocusedTextColor = Color(0xFF1A1A1A),
-                            focusedBorderColor = Color(0xFF4527A0),
-                            unfocusedBorderColor = Color(0xFFCCCCCC),
-                            focusedContainerColor = Color.White,
-                            unfocusedContainerColor = Color.White
-                        ),
-                        textStyle = androidx.compose.ui.text.TextStyle(fontSize = fontSize)
+        // ── ▲ ▼ for message list ──────────────────────────────────────────────
+        ScrollButtons(
+            onUp = {
+                msgScope.launch {
+                    msgListState.animateScrollToItem(
+                        maxOf(0, msgListState.firstVisibleItemIndex - visibleCount)
                     )
-                    Button(
-                        onClick = {
-                            val text = messageText.trim()
-                            if (text.isNotEmpty()) {
-                                try {
-                                    val smsManager = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                                        context.getSystemService(SmsManager::class.java)
-                                    } else {
-                                        @Suppress("DEPRECATION")
-                                        SmsManager.getDefault()
-                                    }
-                                    if (smsManager == null) {
-                                        android.widget.Toast.makeText(context, "SMS not available on this device", android.widget.Toast.LENGTH_LONG).show()
-                                    } else {
-                                        smsManager.sendTextMessage(thread.address, null, text, null, null)
-                                        messageText = ""
-                                        // Reload immediately so the sent message appears right away
-                                        messages = loadMessages(context, thread.threadId)
-                                    }
-                                } catch (e: Exception) {
-                                    android.widget.Toast.makeText(context, "Failed to send: ${e.message}", android.widget.Toast.LENGTH_LONG).show()
-                                }
-                            }
-                        },
-                        modifier = Modifier.size(64.dp),
-                        shape = RoundedCornerShape(16.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4527A0)),
-                        contentPadding = PaddingValues(0.dp)
-                    ) {
-                        Icon(Icons.Filled.Send, null, tint = Color.White, modifier = Modifier.size(28.dp))
-                    }
                 }
-                Spacer(Modifier.height(8.dp))
+            },
+            onDown = {
+                msgScope.launch {
+                    msgListState.animateScrollToItem(
+                        minOf(messages.size - 1, msgListState.firstVisibleItemIndex + visibleCount)
+                    )
+                }
+            }
+        )
+
+        // ── Text field + Send ─────────────────────────────────────────────────
+        Surface(color = Color(0xFFEEEEEE)) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 12.dp, vertical = 10.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                OutlinedTextField(
+                    value = messageText,
+                    onValueChange = { messageText = it },
+                    placeholder = { Text("Write a message…", fontSize = fontSize) },
+                    modifier = Modifier.weight(1f),
+                    shape = RoundedCornerShape(24.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedTextColor = Color(0xFF1A1A1A),
+                        unfocusedTextColor = Color(0xFF1A1A1A),
+                        focusedBorderColor = Color(0xFF4527A0),
+                        unfocusedBorderColor = Color(0xFFCCCCCC),
+                        focusedContainerColor = Color.White,
+                        unfocusedContainerColor = Color.White
+                    ),
+                    textStyle = androidx.compose.ui.text.TextStyle(fontSize = fontSize)
+                )
                 Button(
-                    onClick = onBack,
-                    modifier = Modifier.fillMaxWidth().height(52.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF333333)),
-                    shape = RoundedCornerShape(12.dp)
+                    onClick = {
+                        val text = messageText.trim()
+                        if (text.isNotEmpty()) {
+                            try {
+                                val smsManager = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                                    context.getSystemService(SmsManager::class.java)
+                                } else {
+                                    @Suppress("DEPRECATION")
+                                    SmsManager.getDefault()
+                                }
+                                if (smsManager == null) {
+                                    android.widget.Toast.makeText(context, "SMS not available on this device", android.widget.Toast.LENGTH_LONG).show()
+                                } else {
+                                    // Add message instantly to the list for immediate feedback
+                                    messages = messages + SmsMessage(
+                                        body = text,
+                                        date = System.currentTimeMillis(),
+                                        isIncoming = false
+                                    )
+                                    messageText = ""
+                                    // Send in background
+                                    smsManager.sendTextMessage(thread.address, null, text, null, null)
+                                }
+                            } catch (e: Exception) {
+                                android.widget.Toast.makeText(context, "Failed to send: ${e.message}", android.widget.Toast.LENGTH_LONG).show()
+                            }
+                        }
+                    },
+                    modifier = Modifier.size(64.dp),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4527A0)),
+                    contentPadding = PaddingValues(0.dp)
                 ) {
-                    Icon(Icons.Filled.ArrowBack, null, tint = Color.White)
-                    Spacer(Modifier.width(8.dp))
-                    Text("Back to Messages", color = Color.White, fontSize = 20.sp)
+                    Icon(Icons.Filled.Send, null, tint = Color.White, modifier = Modifier.size(28.dp))
                 }
             }
         }
@@ -507,8 +565,8 @@ fun ConversationView(
 @Composable
 fun MessageBubble(message: SmsMessage, fontSize: TextUnit) {
     val bubbleColor = if (message.isIncoming) Color(0xFFEEEEEE) else Color(0xFF4527A0)
-    val textColor = if (message.isIncoming) Color(0xFF1A1A1A) else Color.White
-    val alignment = if (message.isIncoming) Alignment.Start else Alignment.End
+    val textColor   = if (message.isIncoming) Color(0xFF1A1A1A) else Color.White
+    val alignment   = if (message.isIncoming) Alignment.Start   else Alignment.End
 
     Column(
         modifier = Modifier.fillMaxWidth(),
