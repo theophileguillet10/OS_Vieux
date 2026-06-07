@@ -207,6 +207,11 @@ fun GalleryScreen() {
             }
         }
 
+        ScrollButtons(
+            onUp   = { if (page > 0) page-- },
+            onDown = { if (page < pageCount - 1) page++ }
+        )
+
         BottomNavBar(
             onLeft  = if (page > 0) ({ page-- }) else null,
             onRight = if (page < pageCount - 1) ({ page++ }) else null

@@ -183,30 +183,6 @@ private fun formatDate(timestamp: Long): String {
 }
 
 // ── Shared scroll button bar ──────────────────────────────────────────────────
-@Composable
-fun ScrollButtons(onUp: () -> Unit, onDown: () -> Unit) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(Color(0xFFF5F5F5))
-            .padding(horizontal = 12.dp, vertical = 8.dp),
-        horizontalArrangement = Arrangement.spacedBy(10.dp)
-    ) {
-        Button(
-            onClick = onUp,
-            modifier = Modifier.weight(1f).height(58.dp),
-            shape = RoundedCornerShape(14.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF424242))
-        ) { Text("▲  Up", fontSize = 18.sp, color = Color.White) }
-
-        Button(
-            onClick = onDown,
-            modifier = Modifier.weight(1f).height(58.dp),
-            shape = RoundedCornerShape(14.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF424242))
-        ) { Text("▼  Down", fontSize = 18.sp, color = Color.White) }
-    }
-}
 
 @Composable
 fun MessagesScreen(initialName: String? = null, initialPhone: String? = null) {
